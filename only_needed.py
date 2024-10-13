@@ -176,7 +176,7 @@ def Myb(s):
     return xy
 
 
-"""def horsl(s):
+def horsl(s):
     x = -s
     y = 0
     xy = np.array([x, y])
@@ -201,7 +201,7 @@ def horsb(s):
     x = math.sin(math.pi/2*(1-2*s))
     y = math.cos(math.pi/2*(1-2*s))
     xy = np.array([x, y])
-    return xy"""
+    return xy
 
 
 def implicit_transfinite_interpol(discr, Xt, Xb, Xr, Xl, nod=None):
@@ -528,24 +528,24 @@ def compute_jacobian(grid, i, j, nx, ny):
     delta_xi = 1.0 / (nx - 1)
     delta_eta = 1.0 / (ny - 1)
     if i == 0:
-        dx_dxi = (grid[i + 1, j, 0] - grid[i, j, 0]) / delta_xi
-        dy_dxi = (grid[i + 1, j, 1] - grid[i, j, 1]) / delta_xi
+        dx_dxi = (grid[0][i + 1, j] - grid[0][i, j]) / delta_xi
+        dy_dxi = (grid[1][i + 1, j] - grid[1][i, j]) / delta_xi
     elif i == nx - 1:
-        dx_dxi = (grid[i, j, 0] - grid[i - 1, j, 0]) / delta_xi
-        dy_dxi = (grid[i, j, 1] - grid[i - 1, j, 1]) / delta_xi
+        dx_dxi = (grid[0][i, j] - grid[0][i - 1, j]) / delta_xi
+        dy_dxi = (grid[1][i, j] - grid[1][i - 1, j]) / delta_xi
     else:
-        dx_dxi = (grid[i + 1, j, 0] - grid[i - 1, j, 0]) / (2 * delta_xi)
-        dy_dxi = (grid[i + 1, j, 1] - grid[i - 1, j, 1]) / (2 * delta_xi)
+        dx_dxi = (grid[0][i + 1, j] - grid[0][i - 1, j]) / (2 * delta_xi)
+        dy_dxi = (grid[1][i + 1, j] - grid[1][i - 1, j]) / (2 * delta_xi)
 
     if j == 0:
-        dx_deta = (grid[i, j + 1, 0] - grid[i, j, 0]) / delta_eta
-        dy_deta = (grid[i, j + 1, 1] - grid[i, j, 1]) / delta_eta
+        dx_deta = (grid[0][i, j + 1] - grid[0][i, j]) / delta_eta
+        dy_deta = (grid[1][i, j + 1] - grid[1][i, j]) / delta_eta
     elif j == ny - 1:
-        dx_deta = (grid[i, j, 0] - grid[i, j - 1, 0]) / delta_eta
-        dy_deta = (grid[i, j, 1] - grid[i, j - 1, 1]) / delta_eta
+        dx_deta = (grid[0][i, j] - grid[0][i, j - 1]) / delta_eta
+        dy_deta = (grid[1][i, j,] - grid[1][i, j - 1]) / delta_eta
     else:
-        dx_deta = (grid[i, j + 1, 0] - grid[i, j - 1, 0]) / (2 * delta_eta)
-        dy_deta = (grid[i, j + 1, 1] - grid[i, j - 1, 1]) / (2 * delta_eta)
+        dx_deta = (grid[0][i, j + 1] - grid[0][i, j - 1]) / (2 * delta_eta)
+        dy_deta = (grid[1][i, j + 1] - grid[1][i, j - 1]) / (2 * delta_eta)
 
     J = np.array([[dx_dxi, dx_deta], [dy_dxi, dy_deta]])
     # print(J, "\n, \n")
@@ -563,15 +563,8 @@ def compute_contravariant_metric_tensor(g):
 
 
 # Функция для вычисления значения функционала
-def functional(grid_omega, grid_canon, const_grid, grid_shape):
+def functional(grid_omega, grid_canon, grid_shape):
     nx, ny = grid_shape
-    grid_canon = grid_canon.reshape((nx, ny, 2))
-    grid_omega = grid_omega.reshape((nx, ny, 2))
-    for i in range(nx):
-        for j in range(ny):
-            if i == 0 or j == 0 or i == nx-1 or j == ny-1:
-                grid_omega[i, j, 0] = const_grid[i, j, 0]
-                grid_omega[i, j, 1] = const_grid[i, j, 1]
     total_integral = 0.0
     delta_xi = 1 / nx
     delta_eta = 1 / ny
@@ -596,9 +589,6 @@ def functional(grid_omega, grid_canon, const_grid, grid_shape):
 def functional2(grid_omega, grid_canon, grid_shape):
     nx, ny = grid_shape
     aproximation = 0
-    print(grid_canon)
-    grid_canon = np.reshape(grid_canon, (2, nx*ny))
-    grid_omega = np.reshape(grid_omega, (2, nx*ny))
     x = grid_omega[0]
     y = grid_omega[1]
     X = grid_canon[0]
@@ -606,10 +596,10 @@ def functional2(grid_omega, grid_canon, grid_shape):
     X = np.reshape(X, (nx, ny))
     Y = np.reshape(Y, (nx, ny))
     x = np.reshape(x, (nx, ny))
-    print("x00: ", x[0, 0])
+    """print("x00: ", x[0, 0])
     print("x1010: ", x[nx-1, ny-1])
     print("x010: ", x[0, ny-1])
-    print("x100: ", x[nx-1, 0])
+    print("x100: ", x[nx-1, 0])"""
     y = np.reshape(y, (nx, ny))
 
     flag = 0
@@ -624,24 +614,25 @@ def functional2(grid_omega, grid_canon, grid_shape):
     for i in range(nx - 1):
         for j in range(ny - 1):
             for k in range(0, 4):
-                if k == 0:  # lb corner perf
-                    G11 = ((X[i+1, j] - X[i, j]) ** 2) + ((Y[i+1, j] - Y[i, j]) ** 2)
-                    G12 = (X[i+1, j] - X[i, j]) * (X[i, j+1] - X[i, j]) + (Y[i+1, j] - Y[i, j]) * (
-                            Y[i, j+1] - Y[i, j])
-                    G22 = (X[i, j+1] - X[i, j]) ** 2 + (Y[i, j+1] - Y[i, j]) ** 2
-                    Jk = (x[i+1, j] - x[i, j]) * (y[i, j+1] - y[i, j]) - (x[i, j+1] - x[i, j]) * (
-                            y[i+1, j] - y[i, j])
+                if k == 0:  # lb corner perf; k = i,j; k+1 = i,j+1; k-1 = i+1,j
+                    G11 = ((X[i, j + 1] - X[i, j]) ** 2) + ((Y[i, j + 1] - Y[i, j]) ** 2)
+                    G12 = (X[i, j + 1] - X[i, j]) * (X[i + 1, j] - X[i, j]) + (Y[i, j + 1] - Y[i, j]) * (
+                                Y[i + 1, j] - Y[i, j])
+                    G22 = (X[i + 1, j] - X[i, j]) ** 2 + (Y[i + 1, j] - Y[i, j]) ** 2
+                    Jk = (x[i, j + 1] - x[i, j]) * (y[i + 1, j] - y[i, j]) - (x[i + 1, j] - x[i, j]) * (
+                                y[i, j + 1] - y[i, j])
+                    """if i == 0 and j == 0:
+                        print("check: ", x[i, j], x[i, j + 1], y[i + 1, j])"""
                     if Jk <= 0:
                         print("1: ", Jk)
                         flag = 1
-                    Dk = (X[i+1, j] - X[i, j]) * (Y[i, j+1] - Y[i, j]) - (X[i, j+1] - X[i, j]) * (
-                            Y[i+1, j] - Y[i, j])
-                    alpha = ((x[i+1, j] - x[i, j]) ** 2) * G22 - 2 * (x[i+1, j] - x[i, j]) * (
-                            x[i, j+1] - x[i, j]) * G12 + ((
-                                    x[i, j+1] - x[i, j]) ** 2) * G11
-                    gamma = ((y[i+1, j] - y[i, j]) ** 2) * G22 - 2 * (y[i+1, j] - y[i, j]) * (
-                            y[i, j+1] - y[i, j]) * G12 + ((
-                                    y[i, j+1] - y[i, j]) ** 2) * G11
+                    Dk = (X[i, j + 1] - X[i, j]) * (Y[i + 1, j] - Y[i, j]) - (X[i + 1, j] - X[i, j]) * (
+                                Y[i, j + 1] - Y[i, j])
+                    alpha = ((x[i, j + 1] - x[i, j]) ** 2) * G22 - 2 * (x[i, j + 1] - x[i, j]) * (
+                            x[i + 1, j] - x[i, j]) * G12 + ((
+                                                                    x[i + 1, j] - x[i, j]) ** 2) * G11
+                    gamma = ((y[i, j + 1] - y[i, j]) ** 2) * G22 - 2 * (y[i, j + 1] - y[i, j]) * (
+                            y[i + 1, j] - y[i, j]) * G12 + ((y[i + 1, j] - y[i, j]) ** 2) * G11
 
                     numerator = alpha + gamma
                     denominator = Jk * Dk
@@ -653,36 +644,38 @@ def functional2(grid_omega, grid_canon, grid_shape):
 
                     # xk : x[i, j]
                     V = Jk
-                    Ux = (1/Dk)*(G22*(2*x[i, j] - 2*x[i+1, j]) - 2*G12*(2*x[i, j] - x[i+1, j] - x[i, j+1]) +
-                                 G11*(2*x[i, j] - 2*x[i, j+1]))
-                    Uy = (1/Dk)*(G22*(2*y[i, j] - 2*y[i+1, j]) - 4*G12*(2*y[i, j] - y[i+1, j] - y[i, j+1]) +
-                                 G11*(2*y[i, j] - 2*y[i, j+1]))
-                    Uxx = (1/Dk)*(2*G22-4*G12+2*G11)
+                    Ux = (1 / Dk) * (G22 * (2 * x[i, j] - 2 * x[i + 1, j]) - 2 * G12 * (
+                            2 * x[i, j] - x[i + 1, j] - x[i, j + 1]) +
+                                     G11 * (2 * x[i, j] - 2 * x[i, j + 1]))
+                    Uy = (1 / Dk) * (G22 * (2 * y[i, j] - 2 * y[i + 1, j]) - 4 * G12 * (
+                            2 * y[i, j] - y[i + 1, j] - y[i, j + 1]) +
+                                     G11 * (2 * y[i, j] - 2 * y[i, j + 1]))
+                    Uxx = (1 / Dk) * (2 * G22 - 4 * G12 + 2 * G11)
                     Uyy = Uxx
-                    Vx = (y[i+1, j]-y[i, j])-(y[i, j+1] - y[i, j])
-                    Vy = (x[i, j+1]-x[i, j])-(x[i+1, j] - x[i, j])
+                    Vx = (y[i + 1, j] - y[i, j]) - (y[i, j + 1] - y[i, j])
+                    Vy = (x[i, j + 1] - x[i, j]) - (x[i + 1, j] - x[i, j])
                     Vxx = Vyy = 0
-                    Fx = (Ux - Fk*Vx)/V
+                    Fx = (Ux - Fk * Vx) / V
                     Rx[i, j] += Fx
-                    Fy = (Uy - Fk*Vy)/V
-                    Fxx = (Uxx - 2*Fx*Vx - Fk*Vxx)/V
-                    Fyy = (Uyy - 2*Fy*Vy - Fk*Vyy)/V
-                    Fxy = (-2*Fx*Vy)/V
+                    Fy = (Uy - Fk * Vy) / V
+                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
+                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
+                    Fxy = (-2 * Fx * Vy) / V
                     Rxy[i, j] += Fxy
                     Ry[i, j] += Fy
                     Rxx[i, j] += Fxx
                     Ryy[i, j] += Fyy
 
-                    # xk+1 : x[i+1, j]
+                    # xk+1 : x[i, j + 1]
                     V = Jk
-                    Ux = (1 / Dk) * (G22 * (2 * x[i+1, j] - 2 * x[i, j]) - 2 * G12*(
-                        x[i, j+1] - x[i, j]))
-                    Uy = (1 / Dk) * (G22 * (2 * y[i + 1, j] - 2 * y[i, j]) - 2 * G12*(
-                        y[i, j + 1] - y[i, j]))
+                    Ux = (1 / Dk) * (G22 * (2 * x[i + 1, j] - 2 * x[i, j]) - 2 * G12 * (
+                            x[i, j + 1] - x[i, j]))
+                    Uy = (1 / Dk) * (G22 * (2 * y[i + 1, j] - 2 * y[i, j]) - 2 * G12 * (
+                            y[i, j + 1] - y[i, j]))
                     Uxx = (1 / Dk) * 2 * G22
                     Uyy = Uxx
                     Vx = (y[i, j + 1] - y[i, j])
-                    Vy = -(x[i, j+1] - x[i, j])
+                    Vy = -(x[i, j + 1] - x[i, j])
                     Vxx = Vyy = 0
                     Fx = (Ux - Fk * Vx) / V
                     Rx[i, j] += Fx
@@ -690,21 +683,21 @@ def functional2(grid_omega, grid_canon, grid_shape):
                     Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
                     Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
                     Fxy = (-2 * Fx * Vy) / V
-                    Rxy[i+1, j] += Fxy
-                    Ry[i+1, j] += Fy
-                    Rxx[i+1, j] += Fxx
-                    Ryy[i+1, j] += Fyy
+                    Rxy[i + 1, j] += Fxy
+                    Ry[i + 1, j] += Fy
+                    Rxx[i + 1, j] += Fxx
+                    Ryy[i + 1, j] += Fyy
 
-                    # xk-1 : x[i, j+1]
+                    # xk-1 : x[i + 1, j]
                     V = Jk
-                    Ux = (1 / Dk) * (G22 * (2 * x[i, j+1] - 2 * x[i, j]) - 2 * G12*(
-                        x[i+1, j] - x[i, j]))
-                    Uy = (1 / Dk) * (G22 * (2 * y[i, j+1] - 2 * y[i, j]) - 2 * G12*(
-                        y[i+1, j] - y[i, j]))
+                    Ux = (1 / Dk) * (G22 * (2 * x[i + 1, j] - 2 * x[i, j]) - 2 * G12 * (
+                            x[i, j + 1] - x[i, j]))
+                    Uy = (1 / Dk) * (G22 * (2 * y[i + 1, j] - 2 * y[i, j]) - 2 * G12 * (
+                            y[i, j + 1] - y[i, j]))
                     Uxx = (1 / Dk) * 2 * G11
                     Uyy = Uxx
-                    Vx = (y[i, j + 1] - y[i, j])
-                    Vy = -(x[i + 1, j] - x[i, j])
+                    Vx = (y[i + 1, j] - y[i, j])
+                    Vy = -(x[i, j + 1] - x[i, j])
                     Vxx = Vyy = 0
                     Fx = (Ux - Fk * Vx) / V
                     Rx[i, j] += Fx
@@ -712,29 +705,32 @@ def functional2(grid_omega, grid_canon, grid_shape):
                     Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
                     Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
                     Fxy = (-2 * Fx * Vy) / V
-                    Rxy[i, j+1] += Fxy
-                    Ry[i, j+1] += Fy
-                    Rxx[i, j+1] += Fxx
-                    Ryy[i, j+1] += Fyy
+                    Rxy[i + 1, j] += Fxy
+                    Ry[i + 1, j] += Fy
+                    Rxx[i + 1, j] += Fxx
+                    Ryy[i + 1, j] += Fyy
 
-                elif k == 1:    # rt corner perf xk=x[i+1, j+1], xk+1=x[i, j+1], xk-1=x[i+1, j]
-                    G11 = ((X[i, j + 1] - X[i+1, j+1]) ** 2) + (Y[i, j + 1] - Y[i+1, j+1]) ** 2
-                    G12 = (X[i, j + 1] - X[i+1, j+1]) * (X[i + 1, j] - X[i+1, j+1]) + (Y[i, j + 1] - Y[i+1, j+1]) * (
-                            Y[i + 1, j] - Y[i+1, j+1])
-                    G22 = ((X[i + 1, j] - X[i+1, j+1]) ** 2) + (Y[i + 1, j] - Y[i+1, j+1]) ** 2
-                    Jk = (x[i, j + 1] - x[i+1, j+1]) * (y[i + 1, j] - y[i+1, j+1]) - (x[i + 1, j] - x[i+1, j+1]) * (
-                            y[i, j + 1] - y[i+1, j+1])
+                elif k == 1:    # rt corner perf xk=x[i+1, j+1], xk+1=x[i+1, j], xk-1=x[i, j+1]
+                    G11 = ((X[i + 1, j] - X[i + 1, j + 1]) ** 2) + (Y[i + 1, j] - Y[i + 1, j + 1]) ** 2
+                    G12 = (X[i + 1, j] - X[i + 1, j + 1]) * (X[i, j + 1] - X[i + 1, j + 1]) + (
+                                Y[i + 1, j] - Y[i + 1, j + 1]) * (
+                                  Y[i, j + 1] - Y[i + 1, j + 1])
+                    G22 = ((X[i, j + 1] - X[i + 1, j + 1]) ** 2) + (Y[i, j + 1] - Y[i + 1, j + 1]) ** 2
+                    Jk = (x[i + 1, j] - x[i + 1, j + 1]) * (y[i, j + 1] - y[i + 1, j + 1]) - (
+                                x[i, j + 1] - x[i + 1, j + 1]) * (
+                                 y[i + 1, j] - y[i + 1, j + 1])
                     if Jk <= 0:
                         print("2: ", Jk)
                         flag = 1
-                    Dk = (X[i, j + 1] - X[i+1, j+1]) * (Y[i + 1, j] - Y[i+1, j+1]) - (X[i + 1, j] - X[i+1, j+1]) * (
-                            Y[i, j + 1] - Y[i+1, j+1])
-                    alpha = ((x[i, j + 1] - x[i+1, j+1]) ** 2) * G22 - 2 * (x[i, j + 1] - x[i+1, j+1]) * (
-                            x[i + 1, j] - x[i+1, j+1]) * G12 + ((
-                                    x[i + 1, j] - x[i+1, j+1]) ** 2) * G11
-                    gamma = ((y[i, j + 1] - y[i+1, j+1]) ** 2) * G22 - 2 * (y[i, j + 1] - y[i+1, j+1]) * (
-                            y[i + 1, j] - y[i+1, j+1]) * G12 + ((
-                                    y[i + 1, j] - y[i+1, j+1]) ** 2) * G11
+                    Dk = (X[i + 1, j] - X[i + 1, j + 1]) * (Y[i, j + 1] - Y[i + 1, j + 1]) - (
+                                X[i, j + 1] - X[i + 1, j + 1]) * (
+                                 Y[i + 1, j] - Y[i + 1, j + 1])
+                    alpha = ((x[i + 1, j] - x[i + 1, j + 1]) ** 2) * G22 - 2 * (x[i + 1, j] - x[i + 1, j + 1]) * (
+                            x[i, j + 1] - x[i + 1, j + 1]) * G12 + ((
+                                                                            x[i, j + 1] - x[i + 1, j + 1]) ** 2) * G11
+                    gamma = ((y[i + 1, j] - y[i + 1, j + 1]) ** 2) * G22 - 2 * (y[i + 1, j] - y[i + 1, j + 1]) * (
+                            y[i, j + 1] - y[i + 1, j + 1]) * G12 + ((
+                                                                            y[i, j + 1] - y[i + 1, j + 1]) ** 2) * G11
 
                     numerator = alpha + gamma
                     denominator = Jk * Dk
@@ -746,16 +742,16 @@ def functional2(grid_omega, grid_canon, grid_shape):
 
                     # xk : x[i+1, j+1]
                     V = Jk
-                    Ux = (1 / Dk) * (G22 * (2 * x[i + 1, j + 1] - 2 * x[i, j + 1]) - 2 * G12*(
-                        2 * x[i + 1, j + 1] - x[i, j + 1] - x[i + 1, j])) + G11 * (
-                                     2 * x[i + 1, j + 1] - 2 * x[i + 1, j])
-                    Uy = (1 / Dk) * (G22 * (2 * y[i + 1, j + 1] - 2 * y[i, j + 1]) - 4 * G12*(
-                        2 * y[i + 1, j + 1] - y[i, j + 1] - y[i + 1, j])) + G11 * (
-                                     2 * y[i + 1, j + 1] - 2 * y[i + 1, j])
+                    Ux = (1 / Dk) * (G22 * (2 * x[i + 1, j + 1] - 2 * x[i + 1, j]) - 2 * G12 * (
+                            2 * x[i + 1, j + 1] - x[i + 1, j] - x[i, j + 1])) + G11 * (
+                                 2 * x[i + 1, j + 1] - 2 * x[i, j + 1])
+                    Uy = (1 / Dk) * (G22 * (2 * y[i + 1, j + 1] - 2 * y[i + 1, j]) - 4 * G12 * (
+                            2 * y[i + 1, j + 1] - y[i + 1, j] - y[i, j + 1])) + G11 * (
+                                 2 * y[i + 1, j + 1] - 2 * y[i, j + 1])
                     Uxx = (1 / Dk) * (2 * G22 - 4 * G12 + 2 * G11)
                     Uyy = Uxx
-                    Vx = (y[i, j + 1] - y[i + 1, j + 1]) - (y[i + 1, j] - y[i + 1, j + 1])
-                    Vy = (x[i + 1, j] - x[i + 1, j + 1]) - (x[i, j + 1] - x[i + 1, j + 1])
+                    Vx = (y[i + 1, j] - y[i + 1, j + 1]) - (y[i, j + 1] - y[i + 1, j + 1])
+                    Vy = (x[i, j + 1] - x[i + 1, j + 1]) - (x[i + 1, j] - x[i + 1, j + 1])
                     Vxx = Vyy = 0
                     Fx = (Ux - Fk * Vx) / V
                     Rx[i + 1, j + 1] += Fx
@@ -763,42 +759,20 @@ def functional2(grid_omega, grid_canon, grid_shape):
                     Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
                     Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
                     Fxy = (-2 * Fx * Vy) / V
-                    Rxy[i+1, j+1] += Fxy
+                    Rxy[i + 1, j + 1] += Fxy
                     Ry[i + 1, j + 1] += Fy
                     Rxx[i + 1, j + 1] += Fxx
                     Ryy[i + 1, j + 1] += Fyy
 
                     # xk+1 : x[i, j+1]
                     V = Jk
-                    Ux = (1 / Dk) * (G22 * (2 * x[i, j + 1] - 2 * x[i + 1, j + 1]) - 2 * G12*(
-                        x[i + 1, j] - x[i + 1, j + 1]))
-                    Uy = (1 / Dk) * (G22 * (2 * y[i, j + 1] - 2 * y[i + 1, j + 1]) - 2 * G12*(
-                        y[i + 1, j] - y[i + 1, j + 1]))
+                    Ux = (1 / Dk) * (G22 * (2 * x[i + 1, j] - 2 * x[i + 1, j + 1]) - 2 * G12 * (
+                            x[i, j + 1] - x[i + 1, j + 1]))
+                    Uy = (1 / Dk) * (G22 * (2 * y[i + 1, j] - 2 * y[i + 1, j + 1]) - 2 * G12 * (
+                            y[i, j + 1] - y[i + 1, j + 1]))
                     Uxx = (1 / Dk) * 2 * G22
                     Uyy = Uxx
-                    Vx = (y[i + 1, j] - y[i + 1, j + 1])
-                    Vy = -(x[i + 1, j] - x[i + 1, j + 1])
-                    Vxx = Vyy = 0
-                    Fx = (Ux - Fk * Vx) / V
-                    Rx[i + 1, j + 1] += Fx
-                    Fy = (Uy - Fk * Vy) / V
-                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
-                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
-                    Fxy = (-2 * Fx * Vy) / V
-                    Rxy[i, j+1] += Fxy
-                    Ry[i, j + 1] += Fy
-                    Rxx[i, j + 1] += Fxx
-                    Ryy[i, j + 1] += Fyy
-
-                    # xk-1 : x[i+1, j]
-                    V = Jk
-                    Ux = (1 / Dk) * (G22 * (2 * x[i + 1, j] - 2 * x[i + 1, j + 1]) - 2 * G12*(
-                        x[i, j + 1] - x[i + 1, j + 1]))
-                    Uy = (1 / Dk) * (G22 * (2 * y[i + 1, j] - 2 * y[i + 1, j + 1]) - 2 * G12*(
-                        y[i, j + 1] - y[i + 1, j + 1]))
-                    Uxx = (1 / Dk) * 2 * G11
-                    Uyy = Uxx
-                    Vx = (y[i + 1, j] - y[i + 1, j + 1])
+                    Vx = (y[i, j + 1] - y[i + 1, j + 1])
                     Vy = -(x[i, j + 1] - x[i + 1, j + 1])
                     Vxx = Vyy = 0
                     Fx = (Ux - Fk * Vx) / V
@@ -807,29 +781,52 @@ def functional2(grid_omega, grid_canon, grid_shape):
                     Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
                     Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
                     Fxy = (-2 * Fx * Vy) / V
-                    Rxy[i+1, j] += Fxy
+                    Rxy[i + 1, j] += Fxy
                     Ry[i + 1, j] += Fy
                     Rxx[i + 1, j] += Fxx
                     Ryy[i + 1, j] += Fyy
 
+                    # xk-1 : x[i+1, j]
+                    V = Jk
+                    Ux = (1 / Dk) * (G22 * (2 * x[i, j + 1] - 2 * x[i + 1, j + 1]) - 2 * G12 * (
+                            x[i + 1, j] - x[i + 1, j + 1]))
+                    Uy = (1 / Dk) * (G22 * (2 * y[i, j + 1] - 2 * y[i + 1, j + 1]) - 2 * G12 * (
+                            y[i + 1, j] - y[i + 1, j + 1]))
+                    Uxx = (1 / Dk) * 2 * G11
+                    Uyy = Uxx
+                    Vx = (y[i, j + 1] - y[i + 1, j + 1])
+                    Vy = -(x[i + 1, j] - x[i + 1, j + 1])
+                    Vxx = Vyy = 0
+                    Fx = (Ux - Fk * Vx) / V
+                    Rx[i + 1, j + 1] += Fx
+                    Fy = (Uy - Fk * Vy) / V
+                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
+                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
+                    Fxy = (-2 * Fx * Vy) / V
+                    Rxy[i, j + 1] += Fxy
+                    Ry[i, j + 1] += Fy
+                    Rxx[i, j + 1] += Fxx
+                    Ryy[i, j + 1] += Fyy
+
                 elif k == 2:    # rb corner perf xk = x[i+1, j], xk+1=x[i+1, j+1], xk-1=x[i, j]
-                    G11 = ((X[i+1, j+1] - X[i+1, j]) ** 2) + (Y[i+1, j + 1] - Y[i+1, j]) ** 2
-                    G12 = (X[i+1, j+1] - X[i+1, j]) * (X[i, j] - X[i+1, j]) + (Y[i+1, j + 1] - Y[i+1, j]) * (
-                            Y[i, j] - Y[i+1, j])
-                    G22 = (X[i, j] - X[i+1, j]) ** 2 + (Y[i, j] - Y[i+1, j]) ** 2
-                    Jk = (x[i+1, j+1] - x[i+1, j]) * (y[i, j] - y[i+1, j]) - (x[i, j] - x[i+1, j]) * (
-                            y[i+1, j+1] - y[i+1, j])
+                    G11 = ((X[i + 1, j + 1] - X[i, j + 1]) ** 2) + (Y[i + 1, j + 1] - Y[i, j + 1]) ** 2
+                    G12 = (X[i + 1, j + 1] - X[i, j + 1]) * (X[i, j] - X[i, j + 1]) + (
+                            Y[i + 1, j + 1] - Y[i, j + 1]) * (
+                                  Y[i, j] - Y[i, j + 1])
+                    G22 = (X[i, j] - X[i, j + 1]) ** 2 + (Y[i, j] - Y[i, j + 1]) ** 2
+                    Jk = (x[i + 1, j + 1] - x[i, j + 1]) * (y[i, j] - y[i, j + 1]) - (x[i, j] - x[i, j + 1]) * (
+                            y[i + 1, j + 1] - y[i, j + 1])
                     if Jk <= 0:
                         print("3: ", Jk)
                         flag = 1
-                    Dk = (X[i+1, j+1] - X[i+1, j]) * (Y[i, j] - Y[i+1, j]) - (X[i, j] - X[i+1, j]) * (
-                            Y[i+1, j+1] - Y[i+1, j])
-                    alpha = ((x[i+1, j+1] - x[i+1, j]) ** 2) * G22 - 2 * (x[i+1, j+1] - x[i+1, j]) * (
-                            x[i, j] - x[i+1, j]) * G12 + ((
-                                    x[i, j] - x[i+1, j]) ** 2) * G11
-                    gamma = ((y[i+1, j+1] - y[i+1, j]) ** 2) * G22 - 2 * (y[i+1, j+1] - y[i+1, j]) * (
-                            y[i, j] - y[i+1, j]) * G12 + ((
-                                    y[i, j] - y[i+1, j]) ** 2) * G11
+                    Dk = (X[i + 1, j + 1] - X[i, j + 1]) * (Y[i, j] - Y[i, j + 1]) - (X[i, j] - X[i, j + 1]) * (
+                            Y[i + 1, j + 1] - Y[i, j + 1])
+                    alpha = ((x[i + 1, j + 1] - x[i, j + 1]) ** 2) * G22 - 2 * (x[i + 1, j + 1] - x[i, j + 1]) * (
+                            x[i, j] - x[i, j + 1]) * G12 + ((
+                                                                    x[i, j] - x[i, j + 1]) ** 2) * G11
+                    gamma = ((y[i + 1, j + 1] - y[i, j + 1]) ** 2) * G22 - 2 * (y[i + 1, j + 1] - y[i, j + 1]) * (
+                            y[i, j] - y[i, j + 1]) * G12 + ((
+                                                                    y[i, j] - y[i, j + 1]) ** 2) * G11
 
                     numerator = alpha + gamma
                     denominator = Jk * Dk
@@ -841,38 +838,38 @@ def functional2(grid_omega, grid_canon, grid_shape):
 
                     # xk : x[i+1, j]
                     V = Jk
-                    Ux = (1 / Dk) * (G22 * (2 * x[i + 1, j] - 2 * x[i + 1, j + 1]) - 2 * G12*(
-                        2 * x[i + 1, j] - x[i + 1, j + 1] - x[i, j]) +
-                                     G11 * (2 * x[i + 1, j] - 2 * x[i, j]))
-                    Uy = (1 / Dk) * (G22 * (2 * y[i + 1, j] - 2 * y[i + 1, j + 1]) - 4 * G12*(
-                        2 * y[i + 1, j] - y[i + 1, j + 1] - y[i, j]) +
-                                     G11 * (2 * y[i + 1, j] - 2 * y[i, j]))
+                    Ux = (1 / Dk) * (G22 * (2 * x[i, j + 1] - 2 * x[i + 1, j + 1]) - 2 * G12 * (
+                            2 * x[i, j + 1] - x[i + 1, j + 1] - x[i, j]) +
+                                     G11 * (2 * x[i, j + 1] - 2 * x[i, j]))
+                    Uy = (1 / Dk) * (G22 * (2 * y[i, j + 1] - 2 * y[i + 1, j + 1]) - 4 * G12 * (
+                            2 * y[i, j + 1] - y[i + 1, j + 1] - y[i, j]) +
+                                     G11 * (2 * y[i, j + 1] - 2 * y[i, j]))
                     Uxx = (1 / Dk) * (2 * G22 - 4 * G12 + 2 * G11)
                     Uyy = Uxx
-                    Vx = (y[i + 1, j + 1] - y[i + 1, j]) - (y[i, j] - y[i + 1, j])
-                    Vy = (x[i, j] - x[i + 1, j]) - (x[i + 1, j + 1] - x[i + 1, j])
+                    Vx = (y[i + 1, j + 1] - y[i, j + 1]) - (y[i, j] - y[i, j + 1])
+                    Vy = (x[i, j] - x[i, j + 1]) - (x[i + 1, j + 1] - x[i, j + 1])
                     Vxx = Vyy = 0
                     Fx = (Ux - Fk * Vx) / V
-                    Rx[i + 1, j] += Fx
+                    Rx[i, j + 1] += Fx
                     Fy = (Uy - Fk * Vy) / V
                     Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
                     Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
                     Fxy = (-2 * Fx * Vy) / V
-                    Rxy[i+1, j] += Fxy
-                    Ry[i + 1, j] += Fy
-                    Rxx[i + 1, j] += Fxx
-                    Ryy[i + 1, j] += Fyy
+                    Rxy[i, j + 1] += Fxy
+                    Ry[i, j + 1] += Fy
+                    Rxx[i, j + 1] += Fxx
+                    Ryy[i, j + 1] += Fyy
 
                     # xk+1 : x[i+1, j+1]
                     V = Jk
-                    Ux = (1 / Dk) * (G22 * (2 * x[i + 1, j + 1] - 2 * x[i + 1, j]) - 2 * G12*(
-                        x[i, j] - x[i + 1, j]))
-                    Uy = (1 / Dk) * (G22 * (2 * y[i + 1, j + 1] - 2 * y[i + 1, j]) - 2 * G12*(
-                        y[i, j] - y[i + 1, j]))
+                    Ux = (1 / Dk) * (G22 * (2 * x[i + 1, j + 1] - 2 * x[i, j + 1]) - 2 * G12 * (
+                            x[i, j] - x[i, j + 1]))
+                    Uy = (1 / Dk) * (G22 * (2 * y[i + 1, j + 1] - 2 * y[i, j + 1]) - 2 * G12 * (
+                            y[i, j] - y[i, j + 1]))
                     Uxx = (1 / Dk) * 2 * G22
                     Uyy = Uxx
-                    Vx = (y[i, j] - y[i + 1, j])
-                    Vy = -(x[i, j] - x[i + 1, j])
+                    Vx = (y[i, j] - y[i, j + 1])
+                    Vy = -(x[i, j] - x[i, j + 1])
                     Vxx = Vyy = 0
                     Fx = (Ux - Fk * Vx) / V
                     Rx[i + 1, j + 1] += Fx
@@ -880,21 +877,21 @@ def functional2(grid_omega, grid_canon, grid_shape):
                     Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
                     Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
                     Fxy = (-2 * Fx * Vy) / V
-                    Rxy[i+1, j+1] += Fxy
+                    Rxy[i + 1, j + 1] += Fxy
                     Ry[i + 1, j + 1] += Fy
                     Rxx[i + 1, j + 1] += Fxx
                     Ryy[i + 1, j + 1] += Fyy
 
                     # xk-1 : x[i, j]
                     V = Jk
-                    Ux = (1 / Dk) * (G22 * (2 * x[i, j] - 2 * x[i, j + 1]) - 2 * G12*(
-                        x[i + 1, j] - x[i, j]))
-                    Uy = (1 / Dk) * (G22 * (2 * y[i, j] - 2 * y[i, j + 1]) - 2 * G12*(
-                        y[i + 1, j] - y[i, j]))
+                    Ux = (1 / Dk) * (G22 * (2 * x[i, j] - 2 * x[i, j + 1]) - 2 * G12 * (
+                            x[i, j + 1] - x[i, j]))
+                    Uy = (1 / Dk) * (G22 * (2 * y[i, j] - 2 * y[i, j + 1]) - 2 * G12 * (
+                            y[i, j + 1] - y[i, j]))
                     Uxx = (1 / Dk) * 2 * G11
                     Uyy = Uxx
                     Vx = (y[i, j] - y[i, j + 1])
-                    Vy = -(x[i + 1, j] - x[i, j])
+                    Vy = -(x[i, j + 1] - x[i, j])
                     Vxx = Vyy = 0
                     Fx = (Ux - Fk * Vx) / V
                     Rx[i, j] += Fx
@@ -908,24 +905,25 @@ def functional2(grid_omega, grid_canon, grid_shape):
                     Ryy[i, j] += Fyy
 
                 elif k == 3:    # lt corner perf xk=x[i+1, j], xk+1=x[i, j], xk-1=x[i+1, j+1]
-                    G11 = (X[i, j] - X[i, j+1]) ** 2 + (Y[i, j] - Y[i, j+1]) ** 2
-                    G12 = (X[i, j] - X[i, j+1]) * (X[i+1, j+1] - X[i, j+1]) + (
-                                Y[i, j] - Y[i, j+1]) * (
-                                  Y[i+1, j+1] - Y[i, j+1])
-                    G22 = (X[i+1, j+1] - X[i, j+1]) ** 2 + (Y[i+1, j+1] - Y[i, j+1]) ** 2
-                    Jk = (x[i, j] - x[i, j+1]) * (y[i+1, j+1] - y[i, j+1]) - (x[i+1, j+1] - x[i, j+1]) * (
-                            y[i, j] - y[i, j+1])
+                    G11 = (X[i, j] - X[i + 1, j]) ** 2 + (Y[i, j] - Y[i + 1, j]) ** 2
+                    G12 = (X[i, j] - X[i + 1, j]) * (X[i + 1, j + 1] - X[i + 1, j]) + (
+                            Y[i, j] - Y[i + 1, j]) * (
+                                  Y[i + 1, j + 1] - Y[i + 1, j])
+                    G22 = (X[i + 1, j + 1] - X[i + 1, j]) ** 2 + (Y[i + 1, j + 1] - Y[i + 1, j]) ** 2
+                    Jk = (x[i, j] - x[i + 1, j]) * (y[i + 1, j + 1] - y[i + 1, j]) - (x[i + 1, j + 1] - x[i + 1, j]) * (
+                            y[i, j] - y[i + 1, j])
                     if Jk <= 0:
-                        print("4: ", Jk)
+                        print("4: ", Jk, "\n", x[i, j], x[i + 1, j], x[i + 1, j + 1])
+                        print("4.2: ", Jk, "\n", y[i, j], y[i + 1, j], y[i + 1, j + 1])
                         flag = 1
-                    Dk = (X[i, j] - X[i, j+1]) * (Y[i+1, j+1] - Y[i, j+1]) - (X[i+1, j+1] - X[i, j+1]) * (
-                            Y[i, j] - Y[i, j+1])
-                    alpha = ((x[i, j] - x[i, j+1]) ** 2) * G22 - 2 * (x[i, j] - x[i, j+1]) * (
-                            x[i+1, j+1] - x[i, j+1]) * G12 + ((
-                                    x[i+1, j+1] - x[i, j+1]) ** 2) * G11
-                    gamma = ((y[i, j] - y[i, j+1]) ** 2) * G22 - 2 * (y[i, j] - y[i, j+1]) * (
-                            y[i+1, j+1] - y[i, j+1]) * G12 + ((
-                                    y[i+1, j+1] - y[i, j+1]) ** 2) * G11
+                    Dk = (X[i, j] - X[i + 1, j]) * (Y[i + 1, j + 1] - Y[i + 1, j]) - (X[i + 1, j + 1] - X[i + 1, j]) * (
+                            Y[i, j] - Y[i + 1, j])
+                    alpha = ((x[i, j] - x[i + 1, j]) ** 2) * G22 - 2 * (x[i, j] - x[i + 1, j]) * (
+                            x[i + 1, j + 1] - x[i + 1, j]) * G12 + ((
+                                                                            x[i + 1, j + 1] - x[i + 1, j]) ** 2) * G11
+                    gamma = ((y[i, j] - y[i + 1, j]) ** 2) * G22 - 2 * (y[i, j] - y[i + 1, j]) * (
+                            y[i + 1, j + 1] - y[i + 1, j]) * G12 + ((
+                                                                            y[i + 1, j + 1] - y[i + 1, j]) ** 2) * G11
 
                     numerator = alpha + gamma
                     denominator = Jk * Dk
@@ -935,40 +933,40 @@ def functional2(grid_omega, grid_canon, grid_shape):
 
                     # DERIVS:
 
-                    # xk : x[i, j+1]
+                    # xk : x[i+1, j]
                     V = Jk
-                    Ux = (1 / Dk) * (G22 * (2 * x[i, j + 1] - 2 * x[i, j]) - 2 * G12*(
-                        2 * x[i, j + 1] - x[i, j] - x[i + 1, j + 1]) +
-                                     G11 * (2 * x[i, j + 1] - 2 * x[i + 1, j + 1]))
-                    Uy = (1 / Dk) * (G22 * (2 * y[i, j + 1] - 2 * y[i, j]) - 4 * G12*(
-                        2 * y[i, j + 1] - y[i, j] - y[i + 1, j + 1]) +
-                                     G11 * (2 * y[i, j + 1] - 2 * y[i + 1, j + 1]))
+                    Ux = (1 / Dk) * (G22 * (2 * x[i + 1, j] - 2 * x[i, j]) - 2 * G12 * (
+                            2 * x[i + 1, j] - x[i, j] - x[i + 1, j + 1]) +
+                                     G11 * (2 * x[i + 1, j] - 2 * x[i + 1, j + 1]))
+                    Uy = (1 / Dk) * (G22 * (2 * y[i + 1, j] - 2 * y[i, j]) - 4 * G12 * (
+                            2 * y[i + 1, j] - y[i, j] - y[i + 1, j + 1]) +
+                                     G11 * (2 * y[i + 1, j] - 2 * y[i + 1, j + 1]))
                     Uxx = (1 / Dk) * (2 * G22 - 4 * G12 + 2 * G11)
                     Uyy = Uxx
-                    Vx = (y[i, j] - y[i, j + 1]) - (y[i + 1, j + 1] - y[i, j + 1])
-                    Vy = (x[i + 1, j + 1] - x[i, j + 1]) - (x[i, j] - x[i, j + 1])
+                    Vx = (y[i, j] - y[i + 1, j]) - (y[i + 1, j + 1] - y[i + 1, j])
+                    Vy = (x[i + 1, j + 1] - x[i + 1, j]) - (x[i, j] - x[i + 1, j])
                     Vxx = Vyy = 0
                     Fx = (Ux - Fk * Vx) / V
-                    Rx[i, j + 1] += Fx
+                    Rx[i + 1, j] += Fx
                     Fy = (Uy - Fk * Vy) / V
                     Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
                     Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
                     Fxy = (-2 * Fx * Vy) / V
-                    Rxy[i, j+1] += Fxy
-                    Ry[i, j + 1] += Fy
-                    Rxx[i, j + 1] += Fxx
-                    Ryy[i, j + 1] += Fyy
+                    Rxy[i + 1, j] += Fxy
+                    Ry[i + 1, j] += Fy
+                    Rxx[i + 1, j] += Fxx
+                    Ryy[i + 1, j] += Fyy
 
                     # xk+1 : x[i, j]
                     V = Jk
-                    Ux = (1 / Dk) * (G22 * (2 * x[i, j] - 2 * x[i, j + 1]) - 2 * G12*(
-                        x[i + 1, j + 1] - x[i, j + 1]))
-                    Uy = (1 / Dk) * (G22 * (2 * y[i, j] - 2 * y[i, j + 1]) - 2 * G12*(
-                        y[i + 1, j + 1] - y[i, j + 1]))
+                    Ux = (1 / Dk) * (G22 * (2 * x[i, j] - 2 * x[i + 1, j]) - 2 * G12 * (
+                            x[i + 1, j + 1] - x[i + 1, j]))
+                    Uy = (1 / Dk) * (G22 * (2 * y[i, j] - 2 * y[i + 1, j]) - 2 * G12 * (
+                            y[i + 1, j + 1] - y[i + 1, j]))
                     Uxx = (1 / Dk) * 2 * G22
                     Uyy = Uxx
-                    Vx = (y[i + 1, j + 1] - y[i, j + 1])
-                    Vy = -(x[i + 1, j + 1] - x[i, j + 1])
+                    Vx = (y[i + 1, j + 1] - y[i + 1, j])
+                    Vy = -(x[i + 1, j + 1] - x[i + 1, j])
                     Vxx = Vyy = 0
                     Fx = (Ux - Fk * Vx) / V
                     Rx[i, j] += Fx
@@ -983,14 +981,14 @@ def functional2(grid_omega, grid_canon, grid_shape):
 
                     # xk-1 : x[i+1, j+1]
                     V = Jk
-                    Ux = (1 / Dk) * (G22 * (2 * x[i + 1, j + 1] - 2 * x[i, j + 1]) - 2 * G12*(
-                        x[i, j] - x[i, j + 1]))
-                    Uy = (1 / Dk) * (G22 * (2 * y[i + 1, j + 1] - 2 * y[i, j + 1]) - 2 * G12*(
-                        y[i, j] - y[i, j + 1]))
+                    Ux = (1 / Dk) * (G22 * (2 * x[i + 1, j + 1] - 2 * x[i + 1, j]) - 2 * G12 * (
+                            x[i, j] - x[i + 1, j]))
+                    Uy = (1 / Dk) * (G22 * (2 * y[i + 1, j + 1] - 2 * y[i + 1, j]) - 2 * G12 * (
+                            y[i, j] - y[i + 1, j]))
                     Uxx = (1 / Dk) * 2 * G11
                     Uyy = Uxx
-                    Vx = (y[i + 1, j + 1] - y[i, j + 1])
-                    Vy = -(x[i, j] - x[i, j + 1])
+                    Vx = (y[i + 1, j + 1] - y[i + 1, j])
+                    Vy = -(x[i, j] - x[i + 1, j])
                     Vxx = Vyy = 0
                     Fx = (Ux - Fk * Vx) / V
                     Rx[i + 1, j + 1] += Fx
@@ -998,59 +996,47 @@ def functional2(grid_omega, grid_canon, grid_shape):
                     Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
                     Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
                     Fxy = (-2 * Fx * Vy) / V
-                    Rxy[i+1, j+1] += Fxy
+                    Rxy[i + 1, j + 1] += Fxy
                     Ry[i + 1, j + 1] += Fy
                     Rxx[i + 1, j + 1] += Fxx
                     Ryy[i + 1, j + 1] += Fyy
 
-    """print("aproxim: ", aproximation/((nx-1)*(ny-1)*8))"""
+    if flag != 1:
+        print("aproxim: ", aproximation/((nx-1)*(ny-1)*8))
     return aproximation/((nx-1)*(ny-1)*8), Rx, Ry, Rxx, Ryy, Rxy, flag
 
 
-def mimimize(omega, canon, grid_shape, tau, eps):
+def mimimize(omega, canon, grid_shape, tau, eps, count=0):
+    flag = 0
     nx, ny = grid_shape
     Fk, Rx, Ry, Rxx, Ryy, Rxy, flag = functional2(omega, canon, grid_shape)
-    omega = np.reshape(omega, (2, nx * ny))
-    canon = np.reshape(canon, (2, nx * ny))
     x_old = omega[0]
     y_old = omega[1]
-    x_new = omega[0]
-    y_new = omega[1]
-    x_old = np.reshape(x_old, (nx, ny))
-    y_old = np.reshape(y_old, (nx, ny))
-    x_new = np.reshape(x_new, (nx, ny))
-    y_new = np.reshape(y_new, (nx, ny))
+    if count >= 500:
+        return np.array([x_old, y_old])
+    x_new = x_old.copy()
+    y_new = y_old.copy()
     maxdif = 0.0
     for i in range(1, nx-1):
         for j in range(1, ny-1):
-            x_new[i, j] = x_old[i, j] - tau * (Rx[i, j] * Ryy[i, j] - Ry[i, j] * Ryy[i, j]) * ((Rxx[i, j] * Ryy[i, j] - Rxy[i, j] * Rxy[i, j]) ** (-1))
-            y_new[i, j] = y_old[i, j] - tau * (Rx[i, j] * Ryy[i, j] - Ry[i, j] * Ryy[i, j]) * ((Rxx[i, j] * Ryy[i, j] - Rxy[i, j] * Rxy[i, j]) ** (-1))
-            if x_new[i, j] - x_old[i, j] > maxdif:
-                maxdif = x_new[i, j] - x_old[i, j]
-            if y_new[i, j] - y_old[i, j] > maxdif:
-                maxdif = y_new[i, j] - y_old[i, j]
+            x_new[i, j] = x_old[i, j] - tau * (Rx[i, j] * Ryy[i, j] - Ry[i, j] * Ryy[i, j])/((Rxx[i, j] * Ryy[i, j] - Rxy[i, j] * Rxy[i, j]))
+            y_new[i, j] = y_old[i, j] - tau * (Rx[i, j] * Ryy[i, j] - Ry[i, j] * Ryy[i, j])/((Rxx[i, j] * Ryy[i, j] - Rxy[i, j] * Rxy[i, j]))
+            if abs(x_new[i, j] - x_old[i, j]) > maxdif:
+                maxdif = abs(x_new[i, j] - x_old[i, j])
+            if abs(y_new[i, j] - y_old[i, j]) > maxdif:
+                maxdif = abs(y_new[i, j] - y_old[i, j])
     new_grid = np.array([x_new, y_new])
     flag = functional2(new_grid, canon, (nx, ny))[6]
     if flag == 1:
-        tau_new = tau/10
-        mimimize(omega, canon, grid_shape, tau_new, eps)
+        tau_new = tau/2
+        count += 1
+        return mimimize(np.array([x_old, y_old]), canon, grid_shape, tau_new, eps, count)
     else:
         if maxdif <= eps:
-            return np.array([x_new, y_new])
+            return np.array([x_old, y_old])
         else:
-            mimimize(np.array([x_new, y_new]), canon, grid_shape, tau, eps)
-
-
-def minimize_functional(omega, canon, grid_shape):
-    result = minimize(lambda x: functional2(x, canon, grid_shape), omega.flatten(), method='L-BFGS-B', tol=0.001)
-    optimized_grid = result.x.reshape(-1, 2)
-    return optimized_grid
-
-
-def var_metr_method(omega, canon, nx, ny):
-    grid_shape = nx, ny
-    adapted_grid = minimize_functional(omega, canon, grid_shape)
-    return adapted_grid
+            count += 1
+            return mimimize(np.array([x_new, y_new]), canon, grid_shape, tau, eps, count)
 
 
 def plot_grid(grid, nx, ny, title):
@@ -1112,15 +1098,16 @@ plt.show()
 
 node2 = [11, 11, 0.6, 0.5]
 
-nx, ny = 10, 10
+nx, ny = 20, 20
 # canon_grid = implicit_transfinite_interpol(nx, sq_t1, sq_b1, sq_l1, sq_r1)
-canon_grid = implicit_transfinite_interpol(nx, sq_t1, sq_b1, sq_l1, sq_r1)
-canon_for_min = canon_grid
 # canon_grid, count = winslow_without_implicit(NX, Xyt, Xyb, Xyr, Xyl, treshhold)
 # canon_grid = transfinite_interpol(nx, Xyt, Xyb, Xyl, Xyr)
 # canon_grid = implicit_transfinite_interpol(nx, chevt, chevb, chevr, chevl)
+# canon_grid = implicit_transfinite_interpol(nx, myt, myb, myr, myl)
+canon_grid = implicit_transfinite_interpol(nx, sq_t1, sq_b1, sq_l1, sq_r1)
+canon_for_min = canon_grid
 
-for i in range(nx):
+"""for i in range(nx):
     for j in range(ny):
         if i == (nx//2) - 1:
             canon_grid[0][i][j] += 0.03
@@ -1138,44 +1125,84 @@ for i in range(nx):
         if i == nx - 5:
             canon_grid[0][i][j] -= 0.03
         if j == ny - 5:
-            canon_grid[1][i][j] -= 0.03
-"""for i in range(nx):
+            canon_grid[1][i][j] -= 0.03"""
+for i in range(nx-1, -1, -1):
     for j in range(ny):
-        if j != 0 and j != nx-1:
-            canon_grid[1][i][j] -= (nx/(nx*nx*2))"""
+        if i != 0 and i != ny-1:
+            canon_grid[0][i][j] = canon_grid[0][i][j]**2
+
+canon_grid[0] = np.flip(canon_grid[0], axis=0)
+canon_grid[1] = np.flip(canon_grid[1], axis=0)
+canon_grid[0] = np.transpose(canon_grid[0])
+canon_grid[1] = np.transpose(canon_grid[1])
+
+xx, yy = canon_grid[0], canon_grid[1]
+canon_grid = (xx, yy)
+
+"""
+for i in range(nx-1, -1, -1):
+    for j in range(ny):
+        print(round(canon_grid[0][i, j], 3), end="\t")
+    print("\n")
+print("\n"*5)
+for i in range(nx-1, -1, -1):
+    for j in range(ny):
+        print(round(canon_grid[1][i, j], 3), end="\t")
+    print("\n")"""
 
 plt.plot(canon_grid[0], canon_grid[1], c="b", linewidth=1)
 plt.plot(np.transpose(canon_grid[0]), np.transpose(canon_grid[1]), c="b", linewidth=1)
 plt.show()
-xx, yy = canon_grid[0], canon_grid[1]
-canon_grid = np.stack([xx, yy], axis=-1)
+
+"""print(xx)
+print("x ", xx[0, 0], xx[nx-1, ny-1])
+print("y ", yy[0, 0], yy[nx-1, ny-1])"""
+
+
 # omega_grid2, count = winslow_without_implicit(20, Xyt, Xyb, Xyr, Xyl, treshhold)
 # omega_grid2 = implicit_transfinite_interpol(nx, myt, myb, myr, myl)
 # omega_grid2 = transfinite_interpol(nx, Xyt, Xyb, Xyl, Xyr)
 # omega_grid2 = implicit_transfinite_interpol(nx, chevt, chevb, chevr, chevl)
 # omega_grid2 = transfinite_interpol(20, horst, horsb, horsr, horsl)
-# omega_grid2 = implicit_transfinite_interpol(nx, myt, myb, myr, myl)
-# omega_grid2 = winslow_without_implicit(nx, Xyt, Xyb, Xyr, Xyl, treshhold)
-omega_grid2 = implicit_transfinite_interpol(nx, sq_t1, sq_b1, sq_l1, sq_r1)
-omega_for_min = omega_grid2
+omega_grid2 = implicit_transfinite_interpol(nx, myt, myb, myr, myl)
+# omega_grid2 = winslow_without_implicit(nx, Xyt, Xyb, Xyr, Xyl, treshhold)[0]
+# omega_grid2 = implicit_transfinite_interpol(nx, sq_t1, sq_b1, sq_l1, sq_r1)
+# print("\n")
+# print(omega_grid2)
+omega_grid2[0] = np.flip(omega_grid2[0], axis=0)
+omega_grid2[1] = np.flip(omega_grid2[1], axis=0)
+"""omega_grid2[0] = np.transpose(omega_grid2[0])
+omega_grid2[1] = np.transpose(omega_grid2[1])"""
+xx, yy = omega_grid2[0], omega_grid2[1]
+omega_grid = (xx, yy)
+"""for i in range(nx-1, -1, -1):
+    for j in range(ny):
+        print(round(omega_grid2[0][i, j], 3), end="\t")
+    print("\n")
+print("\n"*5)
+for i in range(nx-1, -1, -1):
+    for j in range(ny):
+        print(round(omega_grid2[1][i, j], 3), end="\t")
+    print("\n")"""
+"""print("check2: ", omega_grid2[0][0, 0], omega_grid2[0][nx-1, ny-1])"""
+
 plt.plot(omega_grid2[0], omega_grid2[1], c="b", linewidth=1)
 plt.plot(np.transpose(omega_grid2[0]), np.transpose(omega_grid2[1]), c="b", linewidth=1)
 plt.show()
-# print("\n")
-# print(omega_grid2)
-xx, yy = omega_grid2[0], omega_grid2[1]
-omega_grid = np.stack([xx, yy], axis=-1)
 """result = var_metr_method(omega_grid, canon_grid, nx, ny)
 plot_grid(result, nx, ny, 'Optimized Grid')"""
 """flag = functional2(omega_grid, canon_grid, grid_shape=(nx, ny))[6]
 print("flag = ", flag)"""
 
-
-
-new_grid = mimimize(omega_grid, canon_grid, (nx, ny), 0.1, 0.0001)
+### МЕЙН ВЫЗОВ ###
+new_grid = mimimize(omega_grid, canon_grid, (nx, ny), 1, 10**(-8))
 plt.plot(new_grid[0], new_grid[1], c="b", linewidth=1)
 plt.plot(np.transpose(new_grid[0]), np.transpose(new_grid[1]), c="b", linewidth=1)
 plt.show()
+
+### ТЕСТ АПРОКСИМАЦИИ ###
+"""functional(omega_grid2, canon_grid, (nx, ny))
+functional2(omega_grid2, canon_grid, (nx, ny))"""
 
 """test = implicit_transfinite_interpol(41, chevt, chevb, chevr, chevl)        # неявное задание сетки без сдвига узла
 plt.plot(test[0], test[1], c="b", linewidth=1)
