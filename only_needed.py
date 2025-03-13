@@ -139,13 +139,12 @@ def myl(x):
 def myr(x):
     return 100000 - 100000 * x
 
-
 def myt(x):
-    return x**3 + 4
+    return (2*x)**2 + 4
 
 
 def myb(x):
-    return x**3
+    return (2*x)**2
 
 
 def Myl(s):
@@ -610,24 +609,25 @@ def functional2(grid_omega, grid_canon, grid_shape):
     Rxx = np.zeros((nx, ny))
     Ryy = np.zeros((nx, ny))
     Rxy = np.zeros((nx, ny))
+    weight = 12
 
     for i in range(nx - 1):
         for j in range(ny - 1):
             for k in range(0, 4):
-                if k == 0:  # lb corner perf; k = i,j; k+1 = i,j+1; k-1 = i+1,j
+                if k == 0:  # lb corner perfPERF; k = i,j; k+1 = i,j+1; k-1 = i+1,j
                     G11 = ((X[i, j + 1] - X[i, j]) ** 2) + ((Y[i, j + 1] - Y[i, j]) ** 2)
                     G12 = (X[i, j + 1] - X[i, j]) * (X[i + 1, j] - X[i, j]) + (Y[i, j + 1] - Y[i, j]) * (
                                 Y[i + 1, j] - Y[i, j])
                     G22 = (X[i + 1, j] - X[i, j]) ** 2 + (Y[i + 1, j] - Y[i, j]) ** 2
-                    Jk = (x[i, j + 1] - x[i, j]) * (y[i + 1, j] - y[i, j]) - (x[i + 1, j] - x[i, j]) * (
-                                y[i, j + 1] - y[i, j])
                     """if i == 0 and j == 0:
                         print("check: ", x[i, j], x[i, j + 1], y[i + 1, j])"""
+                    Dk = (X[i, j + 1] - X[i, j]) * (Y[i + 1, j] - Y[i, j]) - (X[i + 1, j] - X[i, j]) * (
+                                Y[i, j + 1] - Y[i, j])
+                    Jk = (x[i, j + 1] - x[i, j]) * (y[i + 1, j] - y[i, j]) - (x[i + 1, j] - x[i, j]) * (
+                            y[i, j + 1] - y[i, j])
                     if Jk <= 0:
                         print("1: ", Jk)
                         flag = 1
-                    Dk = (X[i, j + 1] - X[i, j]) * (Y[i + 1, j] - Y[i, j]) - (X[i + 1, j] - X[i, j]) * (
-                                Y[i, j + 1] - Y[i, j])
                     alpha = ((x[i, j + 1] - x[i, j]) ** 2) * G22 - 2 * (x[i, j + 1] - x[i, j]) * (
                             x[i + 1, j] - x[i, j]) * G12 + ((
                                                                     x[i + 1, j] - x[i, j]) ** 2) * G11
@@ -641,74 +641,157 @@ def functional2(grid_omega, grid_canon, grid_shape):
                     aproximation += Fk
 
                     # DERIVS:
+                    if i != 1 and j != 1 and i != nx - 2 and j != nx - 2:
+                        # xk : x[i, j]
+                        Fx = (Dk * (-(-y[i + 1, j] + y[i, j + 1]) * (
+                                    G11 * ((x[i + 1, j] - x[i, j]) ** 2 + (y[i + 1, j] - y[i, j]) ** 2) -
+                                    2 * G12 * ((x[i + 1, j] - x[i, j]) * (x[i, j + 1] - x[i, j]) + (
+                                        y[i + 1, j] - y[i, j]) * (
+                                                       y[i, j + 1] - y[i, j])) +
+                                    G22 * ((x[i, j + 1] - x[i, j]) ** 2 + (y[i, j + 1] - y[i, j]) ** 2)) +
+                                    2 * (-G12 * (x[i + 1, j] + x[i, j + 1] - 2 * x[i, j]) + G11 * (x[i + 1, j] - x[i, j]) +
+                                         G22 * (x[i, j + 1] - x[i, j])) * (
+                                                x[i, j] * (y[i + 1, j] - y[i, j + 1]) + x[i + 1, j] * (
+                                                    y[i, j + 1] - y[i, j]) +
+                                                x[i, j + 1] * (-y[i + 1, j] + y[i, j])))) / \
+                             (x[i, j] * (-y[i + 1, j] + y[i, j + 1]) + x[i, j + 1] * (y[i + 1, j] - y[i, j]) + x[
+                                 i + 1, j] * (-y[i, j + 1] + y[i, j])) ** 2
+                        Fy = (Dk * (-(x[i + 1, j] - x[i, j + 1]) * (
+                                    G11 * ((x[i + 1, j] - x[i, j]) ** 2 + (y[i + 1, j] - y[i, j]) ** 2) -
+                                    2 * G12 * ((x[i + 1, j] - x[i, j]) * (x[i, j + 1] - x[i, j]) + (
+                                        y[i + 1, j] - y[i, j]) * (
+                                                       y[i, j + 1] - y[i, j])) +
+                                    G22 * ((x[i, j + 1] - x[i, j]) ** 2 + (y[i, j + 1] - y[i, j]) ** 2)) -
+                                    2 * (x[i, j] * (y[i + 1, j] - y[i, j + 1]) + x[i + 1, j] * (y[i, j + 1] - y[i, j]) + x[
+                                    i, j + 1] * (-y[i + 1, j] + y[i, j])) *
+                                    (G12 * (y[i + 1, j] + y[i, j + 1] - 2 * y[i, j]) + G11 * (
+                                                -y[i + 1, j] + y[i, j]) + G22 * (-y[i, j + 1] + y[i, j])))) / \
+                             (x[i, j] * (-y[i + 1, j] + y[i, j + 1]) + x[i, j + 1] * (y[i + 1, j] - y[i, j]) + x[
+                                 i + 1, j] * (-y[i, j + 1] + y[i, j])) ** 2
+                        Fxx = (2 * Dk * ((x[i + 1, j] - x[i, j + 1]) ** 2 + (y[i + 1, j] - y[i, j + 1]) ** 2) *
+                               (G11 * (y[i + 1, j] - y[i, j]) ** 2 + (y[i, j + 1] - y[i, j]) * (
+                                           G22 * (y[i, j + 1] - y[i, j]) +
+                                           2 * G12 * (-y[i + 1, j] + y[i, j])))) / \
+                              (x[i, j] * (-y[i + 1, j] + y[i, j + 1]) + x[i, j + 1] * (y[i + 1, j] - y[i, j]) + x[
+                                  i + 1, j] * (-y[i, j + 1] + y[i, j])) ** 3
+                        Fyy = (2 * Dk * (G11 * (x[i + 1, j] - x[i, j]) ** 2 + (x[i, j + 1] - x[i, j]) * (
+                                    G22 * (x[i, j + 1] - x[i, j]) +
+                                    2 * G12 * (-x[i + 1, j] + x[i, j]))) *
+                               ((x[i + 1, j] - x[i, j + 1]) ** 2 + (y[i + 1, j] - y[i, j + 1]) ** 2)) / \
+                              (x[i, j] * (-y[i + 1, j] + y[i, j + 1]) + x[i, j + 1] * (y[i + 1, j] - y[i, j]) + x[
+                                  i + 1, j] * (-y[i, j + 1] + y[i, j])) ** 3
+                        Fxy = -((2 * Dk * ((x[i + 1, j] - x[i, j + 1]) ** 2 + (y[i + 1, j] - y[i, j + 1]) ** 2) *
+                                 (G11 * (x[i + 1, j] - x[i, j]) * (y[i + 1, j] - y[i, j]) +
+                                  G22 * (x[i, j + 1] - x[i, j]) * (y[i, j + 1] - y[i, j]) +
+                                  G12 * (-x[i, j + 1] * y[i + 1, j] + x[i, j] * y[i + 1, j] - x[i + 1, j] * y[i, j + 1] +
+                                         x[i, j] * y[i, j + 1] + (x[i + 1, j] + x[i, j + 1] - 2 * x[i, j]) * y[i, j]))) / (
+                                        x[i, j] * (-y[i + 1, j] + y[i, j + 1]) + x[i, j + 1] * (y[i + 1, j] - y[i, j]) +
+                                        x[
+                                            i + 1, j] * (-y[i, j + 1] + y[i, j])) ** 3)
+                        Rx[i, j] += Fx / weight
+                        Rxy[i, j] += Fxy/weight
+                        Ry[i, j] += Fy/weight
+                        Rxx[i, j] += Fxx/weight
+                        Ryy[i, j] += Fyy/weight
 
-                    # xk : x[i, j]
-                    V = Jk
-                    Ux = (1 / Dk) * (G22 * (2 * x[i, j] - 2 * x[i + 1, j]) - 2 * G12 * (
-                            2 * x[i, j] - x[i + 1, j] - x[i, j + 1]) +
-                                     G11 * (2 * x[i, j] - 2 * x[i, j + 1]))
-                    Uy = (1 / Dk) * (G22 * (2 * y[i, j] - 2 * y[i + 1, j]) - 4 * G12 * (
-                            2 * y[i, j] - y[i + 1, j] - y[i, j + 1]) +
-                                     G11 * (2 * y[i, j] - 2 * y[i, j + 1]))
-                    Uxx = (1 / Dk) * (2 * G22 - 4 * G12 + 2 * G11)
-                    Uyy = Uxx
-                    Vx = (y[i + 1, j] - y[i, j]) - (y[i, j + 1] - y[i, j])
-                    Vy = (x[i, j + 1] - x[i, j]) - (x[i + 1, j] - x[i, j])
-                    Vxx = Vyy = 0
-                    Fx = (Ux - Fk * Vx) / V
-                    Rx[i, j] += Fx
-                    Fy = (Uy - Fk * Vy) / V
-                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
-                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
-                    Fxy = (-2 * Fx * Vy) / V
-                    Rxy[i, j] += Fxy
-                    Ry[i, j] += Fy
-                    Rxx[i, j] += Fxx
-                    Ryy[i, j] += Fyy
+                        # xk+1 : x[i, j + 1]
+                        Fx = Dk * (-G11 * ((x[i + 1, j] - x[i, j]) ** 2 + (y[i + 1, j] - y[i, j]) ** 2) * (
+                                    y[i + 1, j] - y[i, j]) +
+                                   2 * G12 * ((x[i + 1, j] - x[i, j]) ** 2 + (y[i + 1, j] - y[i, j]) ** 2) * (
+                                               y[i, j + 1] - y[i, j]) +
+                                   G22 * (x[i, j + 1] ** 2 * (y[i + 1, j] - y[i, j]) +
+                                          2 * x[i + 1, j] * x[i, j] * (y[i, j + 1] - y[i, j]) -
+                                          (y[i + 1, j] - y[i, j]) * (y[i, j + 1] - y[i, j]) ** 2 +
+                                          x[i, j] ** 2 * (y[i + 1, j] - 2 * y[i, j + 1] + y[i, j]) +
+                                          2 * x[i, j + 1] * (x[i, j] * (-y[i + 1, j] + y[i, j + 1]) + x[i + 1, j] * (
+                                                    -y[i, j + 1] + y[i, j])))) / \
+                             (x[i, j] * (-y[i + 1, j] + y[i, j + 1]) + x[i, j + 1] * (y[i + 1, j] - y[i, j]) + x[
+                                 i + 1, j] * (-y[i, j + 1] + y[i, j])) ** 2
+                        Fy = Dk * (
+                                (-(-x[i + 1, j] + x[i, j]) * (
+                                            G11 * ((x[i + 1, j] - x[i, j]) ** 2 + (y[i + 1, j] - y[i, j]) ** 2)
+                                            - 2 * G12 * ((x[i + 1, j] - x[i, j]) * (x[i, j + 1] - x[i, j]) + (
+                                                y[i + 1, j] - y[i, j]) * (y[i, j + 1] - y[i, j]))
+                                            + G22 * ((x[i, j + 1] - x[i, j]) ** 2 + (y[i, j + 1] - y[i, j]) ** 2)))
+                                + 2 * (x[i, j] * (y[i + 1, j] - y[i, j + 1]) + x[i + 1, j] * (y[i, j + 1] - y[i, j]) + x[
+                            i, j + 1] * (-y[i + 1, j] + y[i, j]))
+                                * (G12 * (y[i + 1, j] - y[i, j]) + G22 * (-y[i, j + 1] + y[i, j]))
+                        ) / (x[i, j] * (-y[i + 1, j] + y[i, j + 1]) + x[i, j + 1] * (y[i + 1, j] - y[i, j]) + x[
+                            i + 1, j] * (-y[i, j + 1] + y[i, j])) ** 2
+                        Fxx = 2 * Dk * ((x[i + 1, j] - x[i, j]) ** 2 + (y[i + 1, j] - y[i, j]) ** 2) * (
+                                G11 * (y[i + 1, j] - y[i, j]) ** 2 +
+                                (y[i, j + 1] - y[i, j]) * (
+                                            G22 * (y[i, j + 1] - y[i, j]) + 2 * G12 * (-y[i + 1, j] + y[i, j]))
+                        ) / (x[i, j] * (-y[i + 1, j] + y[i, j + 1]) + x[i, j + 1] * (y[i + 1, j] - y[i, j]) + x[
+                            i + 1, j] * (-y[i, j + 1] + y[i, j])) ** 3
+                        Fyy = (2 * Dk * (G11 * (x[i + 1, j] - x[i, j]) ** 2 +
+                                         (x[i, j + 1] - x[i, j]) * (
+                                                     G22 * (x[i, j + 1] - x[i, j]) + 2 * G12 * (-x[i + 1, j] + x[i, j]))) *
+                               ((x[i + 1, j] - x[i, j]) ** 2 + (y[i + 1, j] - y[i, j]) ** 2)) / \
+                              (x[i, j] * (-y[i + 1, j] + y[i, j + 1]) + x[i, j + 1] * (y[i + 1, j] - y[i, j]) + x[
+                                  i + 1, j] * (-y[i, j + 1] + y[i, j])) ** 3
+                        Fxy = (-2 * Dk * ((x[i + 1, j] - x[i, j]) ** 2 + (y[i + 1, j] - y[i, j]) ** 2) *
+                               (G11 * (x[i + 1, j] - x[i, j]) * (y[i + 1, j] - y[i, j]) +
+                                G22 * (x[i, j + 1] - x[i, j]) * (y[i, j + 1] - y[i, j]) +
+                                G12 * (-x[i, j + 1] * y[i + 1, j] + x[i, j] * y[i + 1, j] - x[i + 1, j] * y[i, j + 1] + x[
+                                           i, j] * y[i, j + 1] +
+                                       (x[i + 1, j] + x[i, j + 1] - 2 * x[i, j]) * y[i, j])) *
+                               (x[i, j] * (-y[i + 1, j] + y[i, j + 1]) + x[i, j + 1] * (y[i + 1, j] - y[i, j]) + x[
+                                   i + 1, j] * (-y[i, j + 1] + y[i, j])) ** -3)
+                        Rx[i, j + 1] += Fx / weight
+                        Rxy[i, j + 1] += Fxy/weight
+                        Ry[i, j + 1] += Fy/weight
+                        Rxx[i, j + 1] += Fxx/weight
+                        Ryy[i, j + 1] += Fyy/weight
 
-                    # xk+1 : x[i, j + 1]
-                    V = Jk
-                    Ux = (1 / Dk) * (G22 * (2 * x[i + 1, j] - 2 * x[i, j]) - 2 * G12 * (
-                            x[i, j + 1] - x[i, j]))
-                    Uy = (1 / Dk) * (G22 * (2 * y[i + 1, j] - 2 * y[i, j]) - 2 * G12 * (
-                            y[i, j + 1] - y[i, j]))
-                    Uxx = (1 / Dk) * 2 * G22
-                    Uyy = Uxx
-                    Vx = (y[i, j + 1] - y[i, j])
-                    Vy = -(x[i, j + 1] - x[i, j])
-                    Vxx = Vyy = 0
-                    Fx = (Ux - Fk * Vx) / V
-                    Rx[i, j] += Fx
-                    Fy = (Uy - Fk * Vy) / V
-                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
-                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
-                    Fxy = (-2 * Fx * Vy) / V
-                    Rxy[i + 1, j] += Fxy
-                    Ry[i + 1, j] += Fy
-                    Rxx[i + 1, j] += Fxx
-                    Ryy[i + 1, j] += Fyy
-
-                    # xk-1 : x[i + 1, j]
-                    V = Jk
-                    Ux = (1 / Dk) * (G22 * (2 * x[i + 1, j] - 2 * x[i, j]) - 2 * G12 * (
-                            x[i, j + 1] - x[i, j]))
-                    Uy = (1 / Dk) * (G22 * (2 * y[i + 1, j] - 2 * y[i, j]) - 2 * G12 * (
-                            y[i, j + 1] - y[i, j]))
-                    Uxx = (1 / Dk) * 2 * G11
-                    Uyy = Uxx
-                    Vx = (y[i + 1, j] - y[i, j])
-                    Vy = -(x[i, j + 1] - x[i, j])
-                    Vxx = Vyy = 0
-                    Fx = (Ux - Fk * Vx) / V
-                    Rx[i, j] += Fx
-                    Fy = (Uy - Fk * Vy) / V
-                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
-                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
-                    Fxy = (-2 * Fx * Vy) / V
-                    Rxy[i + 1, j] += Fxy
-                    Ry[i + 1, j] += Fy
-                    Rxx[i + 1, j] += Fxx
-                    Ryy[i + 1, j] += Fyy
+                        # xk-1 : x[i + 1, j]
+                        Fx = (Dk * (-G11 * ((x[i + 1, j] - x[i, j]) ** 2 + (y[i + 1, j] - y[i, j]) ** 2) * (
+                                y[i + 1, j] - y[i, j]) +
+                                    2 * G12 * ((x[i + 1, j] - x[i, j]) ** 2 + (y[i + 1, j] - y[i, j]) ** 2) * (
+                                            y[i, j + 1] - y[i, j]) +
+                                    G22 * (x[i, j + 1] ** 2 * (y[i + 1, j] - y[i, j]) +
+                                           2 * x[i + 1, j] * x[i, j] * (y[i, j + 1] - y[i, j]) -
+                                           (y[i + 1, j] - y[i, j]) * (y[i, j + 1] - y[i, j]) ** 2 +
+                                           x[i, j] ** 2 * (y[i + 1, j] - 2 * y[i, j + 1] + y[i, j]) +
+                                           2 * x[i, j + 1] * (x[i, j] * (-y[i + 1, j] + y[i, j + 1]) +
+                                                              x[i + 1, j] * (-y[i, j + 1] + y[i, j]))))) / \
+                             (x[i, j] * (-y[i + 1, j] + y[i, j + 1]) + x[i, j + 1] * (y[i + 1, j] - y[i, j]) + x[
+                                 i + 1, j] * (-y[i, j + 1] + y[i, j])) ** 2
+                        Fy = (Dk * (-(-x[i + 1, j] + x[i, j]) * (
+                                G11 * ((x[i + 1, j] - x[i, j]) ** 2 + (y[i + 1, j] - y[i, j]) ** 2) -
+                                2 * G12 * ((x[i + 1, j] - x[i, j]) * (x[i, j + 1] - x[i, j]) + (
+                                y[i + 1, j] - y[i, j]) * (
+                                                   y[i, j + 1] - y[i, j])) +
+                                G22 * ((x[i, j + 1] - x[i, j]) ** 2 + (y[i, j + 1] - y[i, j]) ** 2)) +
+                                    2 * (x[i, j] * (y[i + 1, j] - y[i, j + 1]) + x[i + 1, j] * (y[i, j + 1] - y[i, j]) + x[
+                                    i, j + 1] * (-y[i + 1, j] + y[i, j])) *
+                                    (G12 * (y[i + 1, j] - y[i, j]) + G22 * (-y[i, j + 1] + y[i, j])))) / \
+                             (x[i, j] * (-y[i + 1, j] + y[i, j + 1]) + x[i, j + 1] * (y[i + 1, j] - y[i, j]) + x[
+                                 i + 1, j] * (-y[i, j + 1] + y[i, j])) ** 2
+                        Fxx = (2 * Dk * ((x[i + 1, j] - x[i, j]) ** 2 + (y[i + 1, j] - y[i, j]) ** 2) *
+                               (G11 * (y[i + 1, j] - y[i, j]) ** 2 + (y[i, j + 1] - y[i, j]) * (
+                                       G22 * (y[i, j + 1] - y[i, j]) +
+                                       2 * G12 * (-y[i + 1, j] + y[i, j])))) / \
+                              (x[i, j] * (-y[i + 1, j] + y[i, j + 1]) + x[i, j + 1] * (y[i + 1, j] - y[i, j]) + x[
+                                  i + 1, j] * (-y[i, j + 1] + y[i, j])) ** 3
+                        Fyy = (2 * Dk * (G11 * (x[i + 1, j] - x[i, j]) ** 2 +
+                                         (x[i, j + 1] - x[i, j]) * (
+                                                 G22 * (x[i, j + 1] - x[i, j]) + 2 * G12 * (-x[i + 1, j] + x[i, j]))) *
+                               ((x[i + 1, j] - x[i, j]) ** 2 + (y[i + 1, j] - y[i, j]) ** 2)) / \
+                              (x[i, j] * (-y[i + 1, j] + y[i, j + 1]) + x[i, j + 1] * (y[i + 1, j] - y[i, j]) + x[
+                                  i + 1, j] * (-y[i, j + 1] + y[i, j])) ** 3
+                        Fxy = -((2 * Dk * ((x[i + 1, j] - x[i, j]) ** 2 + (y[i + 1, j] - y[i, j]) ** 2) *
+                                 (G11 * (x[i + 1, j] - x[i, j]) * (y[i + 1, j] - y[i, j]) +
+                                  G22 * (x[i, j + 1] - x[i, j]) * (y[i, j + 1] - y[i, j]) +
+                                  G12 * (-x[i, j + 1] * y[i + 1, j] + x[i, j] * y[i + 1, j] - x[i + 1, j] * y[i, j + 1] +
+                                         x[i, j] * y[i, j + 1] + (x[i + 1, j] + x[i, j + 1] - 2 * x[i, j]) * y[i, j])))) / \
+                              (x[i, j] * (-y[i + 1, j] + y[i, j + 1]) + x[i, j + 1] * (y[i + 1, j] - y[i, j]) + x[
+                                  i + 1, j] * (-y[i, j + 1] + y[i, j])) ** 3
+                        Rx[i + 1, j] += Fx / weight
+                        Rxy[i + 1, j] += Fxy/weight
+                        Ry[i + 1, j] += Fy/weight
+                        Rxx[i + 1, j] += Fxx/weight
+                        Ryy[i + 1, j] += Fyy/weight
 
                 elif k == 1:    # rt corner perf xk=x[i+1, j+1], xk+1=x[i+1, j], xk-1=x[i, j+1]
                     G11 = ((X[i + 1, j] - X[i + 1, j + 1]) ** 2) + (Y[i + 1, j] - Y[i + 1, j + 1]) ** 2
@@ -716,15 +799,15 @@ def functional2(grid_omega, grid_canon, grid_shape):
                                 Y[i + 1, j] - Y[i + 1, j + 1]) * (
                                   Y[i, j + 1] - Y[i + 1, j + 1])
                     G22 = ((X[i, j + 1] - X[i + 1, j + 1]) ** 2) + (Y[i, j + 1] - Y[i + 1, j + 1]) ** 2
+                    Dk = (X[i + 1, j] - X[i + 1, j + 1]) * (Y[i, j + 1] - Y[i + 1, j + 1]) - (
+                            X[i, j + 1] - X[i + 1, j + 1]) * (
+                                 Y[i + 1, j] - Y[i + 1, j + 1])
                     Jk = (x[i + 1, j] - x[i + 1, j + 1]) * (y[i, j + 1] - y[i + 1, j + 1]) - (
                                 x[i, j + 1] - x[i + 1, j + 1]) * (
                                  y[i + 1, j] - y[i + 1, j + 1])
                     if Jk <= 0:
                         print("2: ", Jk)
                         flag = 1
-                    Dk = (X[i + 1, j] - X[i + 1, j + 1]) * (Y[i, j + 1] - Y[i + 1, j + 1]) - (
-                                X[i, j + 1] - X[i + 1, j + 1]) * (
-                                 Y[i + 1, j] - Y[i + 1, j + 1])
                     alpha = ((x[i + 1, j] - x[i + 1, j + 1]) ** 2) * G22 - 2 * (x[i + 1, j] - x[i + 1, j + 1]) * (
                             x[i, j + 1] - x[i + 1, j + 1]) * G12 + ((
                                                                             x[i, j + 1] - x[i + 1, j + 1]) ** 2) * G11
@@ -739,74 +822,187 @@ def functional2(grid_omega, grid_canon, grid_shape):
                     aproximation += Fk
 
                     # DERIVS:
+                    if i != 1 and j != 1 and i != nx - 2 and j != nx - 2:
+                        # xk : x[i + 1, j + 1]
+                        Fx = (Dk * (-(-y[i, j + 1] + y[i + 1, j]) * (
+                                G11 * ((x[i, j + 1] - x[i + 1, j + 1]) ** 2 + (y[i, j + 1] - y[i + 1, j + 1]) ** 2) -
+                                2 * G12 * ((x[i, j + 1] - x[i + 1, j + 1]) * (x[i + 1, j] - x[i + 1, j + 1]) + (
+                                y[i, j + 1] - y[i + 1, j + 1]) * (
+                                                   y[i + 1, j] - y[i + 1, j + 1])) +
+                                G22 * ((x[i + 1, j] - x[i + 1, j + 1]) ** 2 + (y[i + 1, j] - y[i + 1, j + 1]) ** 2)) +
+                                    2 * (-G12 * (x[i, j + 1] + x[i + 1, j] - 2 * x[i + 1, j + 1]) + G11 * (
+                                            x[i, j + 1] - x[i + 1, j + 1]) +
+                                         G22 * (x[i + 1, j] - x[i + 1, j + 1])) * (
+                                            x[i + 1, j + 1] * (y[i, j + 1] - y[i + 1, j]) + x[i, j + 1] * (
+                                            y[i + 1, j] - y[i + 1, j + 1]) +
+                                            x[i + 1, j] * (-y[i, j + 1] + y[i + 1, j + 1])))) / \
+                             (x[i + 1, j + 1] * (-y[i, j + 1] + y[i + 1, j]) + x[i + 1, j] * (
+                                         y[i, j + 1] - y[i + 1, j + 1]) + x[
+                                  i + 1, j] * (-y[i + 1, j] + y[i + 1, j + 1])) ** 2
+                        Fy = (Dk * (-(x[i, j + 1] - x[i + 1, j]) * (
+                                G11 * ((x[i, j + 1] - x[i + 1, j + 1]) ** 2 + (y[i, j + 1] - y[i + 1, j + 1]) ** 2) -
+                                2 * G12 * ((x[i, j + 1] - x[i + 1, j + 1]) * (x[i + 1, j] - x[i + 1, j + 1]) + (
+                                y[i, j + 1] - y[i + 1, j + 1]) * (
+                                                   y[i + 1, j] - y[i + 1, j + 1])) +
+                                G22 * ((x[i + 1, j] - x[i + 1, j + 1]) ** 2 + (y[i + 1, j] - y[i + 1, j + 1]) ** 2)) -
+                                    2 * (x[i + 1, j + 1] * (y[i, j + 1] - y[i + 1, j]) + x[i, j + 1] * (
+                                            y[i + 1, j] - y[i + 1, j + 1]) + x[
+                                             i, j + 1] * (-y[i, j + 1] + y[i + 1, j + 1])) *
+                                    (G12 * (y[i, j + 1] + y[i + 1, j] - 2 * y[i + 1, j + 1]) + G11 * (
+                                            -y[i, j + 1] + y[i + 1, j + 1]) + G22 * (-y[i + 1, j] + y[i + 1, j + 1])))) / \
+                             (x[i + 1, j + 1] * (-y[i, j + 1] + y[i + 1, j]) + x[i + 1, j] * (
+                                         y[i, j + 1] - y[i + 1, j + 1]) + x[
+                                  i + 1, j] * (-y[i + 1, j] + y[i + 1, j + 1])) ** 2
+                        Fxx = (2 * Dk * ((x[i, j + 1] - x[i + 1, j]) ** 2 + (y[i, j + 1] - y[i + 1, j]) ** 2) *
+                               (G11 * (y[i, j + 1] - y[i + 1, j + 1]) ** 2 + (y[i + 1, j] - y[i + 1, j + 1]) * (
+                                       G22 * (y[i + 1, j] - y[i + 1, j + 1]) +
+                                       2 * G12 * (-y[i, j + 1] + y[i + 1, j + 1])))) / \
+                              (x[i + 1, j + 1] * (-y[i, j + 1] + y[i + 1, j]) + x[i + 1, j] * (
+                                          y[i, j + 1] - y[i + 1, j + 1]) + x[
+                                   i + 1, j] * (-y[i + 1, j] + y[i + 1, j + 1])) ** 3
+                        Fyy = (2 * Dk * (G11 * (x[i, j + 1] - x[i + 1, j + 1]) ** 2 + (x[i + 1, j] - x[i + 1, j + 1]) * (
+                                G22 * (x[i + 1, j] - x[i + 1, j + 1]) +
+                                2 * G12 * (-x[i, j + 1] + x[i + 1, j + 1]))) *
+                               ((x[i, j + 1] - x[i + 1, j]) ** 2 + (y[i, j + 1] - y[i + 1, j]) ** 2)) / \
+                              (x[i + 1, j + 1] * (-y[i, j + 1] + y[i + 1, j]) + x[i + 1, j] * (
+                                          y[i, j + 1] - y[i + 1, j + 1]) + x[
+                                   i + 1, j] * (-y[i + 1, j] + y[i + 1, j + 1])) ** 3
+                        Fxy = -((2 * Dk * ((x[i, j + 1] - x[i + 1, j]) ** 2 + (y[i, j + 1] - y[i + 1, j]) ** 2) *
+                                 (G11 * (x[i, j + 1] - x[i + 1, j + 1]) * (y[i, j + 1] - y[i + 1, j + 1]) +
+                                  G22 * (x[i + 1, j] - x[i + 1, j + 1]) * (y[i + 1, j] - y[i + 1, j + 1]) +
+                                  G12 * (-x[i + 1, j] * y[i, j + 1] + x[i + 1, j + 1] * y[i, j + 1] - x[i, j + 1] * y[
+                                             i + 1, j] +
+                                         x[i + 1, j + 1] * y[i + 1, j] + (x[i, j + 1] + x[i + 1, j] - 2 * x[i + 1, j + 1]) *
+                                         y[i + 1, j + 1]))) / (
+                                        x[i + 1, j + 1] * (-y[i, j + 1] + y[i + 1, j]) + x[i + 1, j] * (
+                                            y[i, j + 1] - y[i + 1, j + 1]) +
+                                        x[
+                                            i + 1, j] * (-y[i + 1, j] + y[i + 1, j + 1])) ** 3)
+                        Rx[i + 1, j + 1] += Fx / weight
+                        Rxy[i + 1, j + 1] += Fxy / weight
+                        Ry[i + 1, j + 1] += Fy / weight
+                        Rxx[i + 1, j + 1] += Fxx / weight
+                        Ryy[i + 1, j + 1] += Fyy / weight
 
-                    # xk : x[i+1, j+1]
-                    V = Jk
-                    Ux = (1 / Dk) * (G22 * (2 * x[i + 1, j + 1] - 2 * x[i + 1, j]) - 2 * G12 * (
-                            2 * x[i + 1, j + 1] - x[i + 1, j] - x[i, j + 1])) + G11 * (
-                                 2 * x[i + 1, j + 1] - 2 * x[i, j + 1])
-                    Uy = (1 / Dk) * (G22 * (2 * y[i + 1, j + 1] - 2 * y[i + 1, j]) - 4 * G12 * (
-                            2 * y[i + 1, j + 1] - y[i + 1, j] - y[i, j + 1])) + G11 * (
-                                 2 * y[i + 1, j + 1] - 2 * y[i, j + 1])
-                    Uxx = (1 / Dk) * (2 * G22 - 4 * G12 + 2 * G11)
-                    Uyy = Uxx
-                    Vx = (y[i + 1, j] - y[i + 1, j + 1]) - (y[i, j + 1] - y[i + 1, j + 1])
-                    Vy = (x[i, j + 1] - x[i + 1, j + 1]) - (x[i + 1, j] - x[i + 1, j + 1])
-                    Vxx = Vyy = 0
-                    Fx = (Ux - Fk * Vx) / V
-                    Rx[i + 1, j + 1] += Fx
-                    Fy = (Uy - Fk * Vy) / V
-                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
-                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
-                    Fxy = (-2 * Fx * Vy) / V
-                    Rxy[i + 1, j + 1] += Fxy
-                    Ry[i + 1, j + 1] += Fy
-                    Rxx[i + 1, j + 1] += Fxx
-                    Ryy[i + 1, j + 1] += Fyy
+                        # xk+1 : x[i + 1, j]
+                        Fx = Dk * (-G11 * ((x[i, j + 1] - x[i + 1, j + 1]) ** 2 + (y[i, j + 1] - y[i + 1, j + 1]) ** 2) * (
+                                y[i, j + 1] - y[i + 1, j + 1]) +
+                                   2 * G12 * ((x[i, j + 1] - x[i + 1, j + 1]) ** 2 + (
+                                            y[i, j + 1] - y[i + 1, j + 1]) ** 2) * (
+                                           y[i + 1, j] - y[i + 1, j + 1]) +
+                                   G22 * (x[i + 1, j] ** 2 * (y[i, j + 1] - y[i + 1, j + 1]) +
+                                          2 * x[i, j + 1] * x[i + 1, j + 1] * (y[i + 1, j] - y[i + 1, j + 1]) -
+                                          (y[i, j + 1] - y[i + 1, j + 1]) * (y[i + 1, j] - y[i + 1, j + 1]) ** 2 +
+                                          x[i + 1, j + 1] ** 2 * (y[i, j + 1] - 2 * y[i + 1, j] + y[i + 1, j + 1]) +
+                                          2 * x[i + 1, j] * (
+                                                      x[i + 1, j + 1] * (-y[i, j + 1] + y[i + 1, j]) + x[i, j + 1] * (
+                                                      -y[i + 1, j] + y[i + 1, j + 1])))) / \
+                             (x[i + 1, j + 1] * (-y[i, j + 1] + y[i + 1, j]) + x[i + 1, j] * (
+                                         y[i, j + 1] - y[i + 1, j + 1]) + x[
+                                  i + 1, j] * (-y[i + 1, j] + y[i + 1, j + 1])) ** 2
+                        Fy = Dk * (
+                                (-(-x[i, j + 1] + x[i + 1, j + 1]) * (
+                                        G11 * ((x[i, j + 1] - x[i + 1, j + 1]) ** 2 + (y[i, j + 1] - y[i + 1, j + 1]) ** 2)
+                                        - 2 * G12 * ((x[i, j + 1] - x[i + 1, j + 1]) * (x[i + 1, j] - x[i + 1, j + 1]) + (
+                                        y[i, j + 1] - y[i + 1, j + 1]) * (y[i + 1, j] - y[i + 1, j + 1]))
+                                        + G22 * ((x[i + 1, j] - x[i + 1, j + 1]) ** 2 + (
+                                            y[i + 1, j] - y[i + 1, j + 1]) ** 2)))
+                                + 2 * (x[i + 1, j + 1] * (y[i, j + 1] - y[i + 1, j]) + x[i, j + 1] * (
+                                    y[i + 1, j] - y[i + 1, j + 1]) + x[
+                                           i, j + 1] * (-y[i, j + 1] + y[i + 1, j + 1]))
+                                * (G12 * (y[i, j + 1] - y[i + 1, j + 1]) + G22 * (-y[i + 1, j] + y[i + 1, j + 1]))
+                        ) / (x[i + 1, j + 1] * (-y[i, j + 1] + y[i + 1, j]) + x[i + 1, j] * (
+                                    y[i, j + 1] - y[i + 1, j + 1]) + x[
+                                 i + 1, j] * (-y[i + 1, j] + y[i + 1, j + 1])) ** 2
+                        Fxx = 2 * Dk * ((x[i, j + 1] - x[i + 1, j + 1]) ** 2 + (y[i, j + 1] - y[i + 1, j + 1]) ** 2) * (
+                                G11 * (y[i, j + 1] - y[i + 1, j + 1]) ** 2 +
+                                (y[i + 1, j] - y[i + 1, j + 1]) * (
+                                        G22 * (y[i + 1, j] - y[i + 1, j + 1]) + 2 * G12 * (-y[i, j + 1] + y[i + 1, j + 1]))
+                        ) / (x[i + 1, j + 1] * (-y[i, j + 1] + y[i + 1, j]) + x[i + 1, j] * (
+                                    y[i, j + 1] - y[i + 1, j + 1]) + x[
+                                 i + 1, j] * (-y[i + 1, j] + y[i + 1, j + 1])) ** 3
+                        Fyy = (2 * Dk * (G11 * (x[i, j + 1] - x[i + 1, j + 1]) ** 2 +
+                                         (x[i + 1, j] - x[i + 1, j + 1]) * (
+                                                 G22 * (x[i + 1, j] - x[i + 1, j + 1]) + 2 * G12 * (
+                                                     -x[i, j + 1] + x[i + 1, j + 1]))) *
+                               ((x[i, j + 1] - x[i + 1, j + 1]) ** 2 + (y[i, j + 1] - y[i + 1, j + 1]) ** 2)) / \
+                              (x[i + 1, j + 1] * (-y[i, j + 1] + y[i + 1, j]) + x[i + 1, j] * (
+                                          y[i, j + 1] - y[i + 1, j + 1]) + x[
+                                   i + 1, j] * (-y[i + 1, j] + y[i + 1, j + 1])) ** 3
+                        Fxy = (-2 * Dk * ((x[i, j + 1] - x[i + 1, j + 1]) ** 2 + (y[i, j + 1] - y[i + 1, j + 1]) ** 2) *
+                               (G11 * (x[i, j + 1] - x[i + 1, j + 1]) * (y[i, j + 1] - y[i + 1, j + 1]) +
+                                G22 * (x[i + 1, j] - x[i + 1, j + 1]) * (y[i + 1, j] - y[i + 1, j + 1]) +
+                                G12 * (-x[i + 1, j] * y[i, j + 1] + x[i + 1, j + 1] * y[i, j + 1] - x[i, j + 1] * y[
+                                           i + 1, j] + x[
+                                           i, j] * y[i + 1, j] +
+                                       (x[i, j + 1] + x[i + 1, j] - 2 * x[i + 1, j + 1]) * y[i + 1, j + 1])) *
+                               (x[i + 1, j + 1] * (-y[i, j + 1] + y[i + 1, j]) + x[i + 1, j] * (
+                                           y[i, j + 1] - y[i + 1, j + 1]) + x[
+                                    i + 1, j] * (-y[i + 1, j] + y[i + 1, j + 1])) ** -3)
+                        Rx[i + 1, j] += Fx / weight
+                        Rxy[i + 1, j] += Fxy / weight
+                        Ry[i + 1, j] += Fy / weight
+                        Rxx[i + 1, j] += Fxx / weight
+                        Ryy[i + 1, j] += Fyy / weight
 
-                    # xk+1 : x[i, j+1]
-                    V = Jk
-                    Ux = (1 / Dk) * (G22 * (2 * x[i + 1, j] - 2 * x[i + 1, j + 1]) - 2 * G12 * (
-                            x[i, j + 1] - x[i + 1, j + 1]))
-                    Uy = (1 / Dk) * (G22 * (2 * y[i + 1, j] - 2 * y[i + 1, j + 1]) - 2 * G12 * (
-                            y[i, j + 1] - y[i + 1, j + 1]))
-                    Uxx = (1 / Dk) * 2 * G22
-                    Uyy = Uxx
-                    Vx = (y[i, j + 1] - y[i + 1, j + 1])
-                    Vy = -(x[i, j + 1] - x[i + 1, j + 1])
-                    Vxx = Vyy = 0
-                    Fx = (Ux - Fk * Vx) / V
-                    Rx[i + 1, j + 1] += Fx
-                    Fy = (Uy - Fk * Vy) / V
-                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
-                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
-                    Fxy = (-2 * Fx * Vy) / V
-                    Rxy[i + 1, j] += Fxy
-                    Ry[i + 1, j] += Fy
-                    Rxx[i + 1, j] += Fxx
-                    Ryy[i + 1, j] += Fyy
-
-                    # xk-1 : x[i+1, j]
-                    V = Jk
-                    Ux = (1 / Dk) * (G22 * (2 * x[i, j + 1] - 2 * x[i + 1, j + 1]) - 2 * G12 * (
-                            x[i + 1, j] - x[i + 1, j + 1]))
-                    Uy = (1 / Dk) * (G22 * (2 * y[i, j + 1] - 2 * y[i + 1, j + 1]) - 2 * G12 * (
-                            y[i + 1, j] - y[i + 1, j + 1]))
-                    Uxx = (1 / Dk) * 2 * G11
-                    Uyy = Uxx
-                    Vx = (y[i, j + 1] - y[i + 1, j + 1])
-                    Vy = -(x[i + 1, j] - x[i + 1, j + 1])
-                    Vxx = Vyy = 0
-                    Fx = (Ux - Fk * Vx) / V
-                    Rx[i + 1, j + 1] += Fx
-                    Fy = (Uy - Fk * Vy) / V
-                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
-                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
-                    Fxy = (-2 * Fx * Vy) / V
-                    Rxy[i, j + 1] += Fxy
-                    Ry[i, j + 1] += Fy
-                    Rxx[i, j + 1] += Fxx
-                    Ryy[i, j + 1] += Fyy
+                        # xk-1 : x[i, j + 1]
+                        Fx = (Dk * (-G11 * ((x[i, j + 1] - x[i + 1, j + 1]) ** 2 + (y[i, j + 1] - y[i + 1, j + 1]) ** 2) * (
+                                y[i, j + 1] - y[i + 1, j + 1]) +
+                                    2 * G12 * ((x[i, j + 1] - x[i + 1, j + 1]) ** 2 + (
+                                            y[i, j + 1] - y[i + 1, j + 1]) ** 2) * (
+                                            y[i + 1, j] - y[i + 1, j + 1]) +
+                                    G22 * (x[i + 1, j] ** 2 * (y[i, j + 1] - y[i + 1, j + 1]) +
+                                           2 * x[i, j + 1] * x[i + 1, j + 1] * (y[i + 1, j] - y[i + 1, j + 1]) -
+                                           (y[i, j + 1] - y[i + 1, j + 1]) * (y[i + 1, j] - y[i + 1, j + 1]) ** 2 +
+                                           x[i + 1, j + 1] ** 2 * (y[i, j + 1] - 2 * y[i + 1, j] + y[i + 1, j + 1]) +
+                                           2 * x[i + 1, j] * (x[i + 1, j + 1] * (-y[i, j + 1] + y[i + 1, j]) +
+                                                              x[i, j + 1] * (-y[i + 1, j] + y[i + 1, j + 1]))))) / \
+                             (x[i + 1, j + 1] * (-y[i, j + 1] + y[i + 1, j]) + x[i + 1, j] * (
+                                         y[i, j + 1] - y[i + 1, j + 1]) + x[
+                                  i + 1, j] * (-y[i + 1, j] + y[i + 1, j + 1])) ** 2
+                        Fy = (Dk * (-(-x[i, j + 1] + x[i + 1, j + 1]) * (
+                                G11 * ((x[i, j + 1] - x[i + 1, j + 1]) ** 2 + (y[i, j + 1] - y[i + 1, j + 1]) ** 2) -
+                                2 * G12 * ((x[i, j + 1] - x[i + 1, j + 1]) * (x[i + 1, j] - x[i + 1, j + 1]) + (
+                                y[i, j + 1] - y[i + 1, j + 1]) * (
+                                                   y[i + 1, j] - y[i + 1, j + 1])) +
+                                G22 * ((x[i + 1, j] - x[i + 1, j + 1]) ** 2 + (y[i + 1, j] - y[i + 1, j + 1]) ** 2)) +
+                                    2 * (x[i + 1, j + 1] * (y[i, j + 1] - y[i + 1, j]) + x[i, j + 1] * (
+                                            y[i + 1, j] - y[i + 1, j + 1]) + x[
+                                             i, j + 1] * (-y[i, j + 1] + y[i + 1, j + 1])) *
+                                    (G12 * (y[i, j + 1] - y[i + 1, j + 1]) + G22 * (-y[i + 1, j] + y[i + 1, j + 1])))) / \
+                             (x[i + 1, j + 1] * (-y[i, j + 1] + y[i + 1, j]) + x[i + 1, j] * (
+                                         y[i, j + 1] - y[i + 1, j + 1]) + x[
+                                  i + 1, j] * (-y[i + 1, j] + y[i + 1, j + 1])) ** 2
+                        Fxx = (2 * Dk * ((x[i, j + 1] - x[i + 1, j + 1]) ** 2 + (y[i, j + 1] - y[i + 1, j + 1]) ** 2) *
+                               (G11 * (y[i, j + 1] - y[i + 1, j + 1]) ** 2 + (y[i + 1, j] - y[i + 1, j + 1]) * (
+                                       G22 * (y[i + 1, j] - y[i + 1, j + 1]) +
+                                       2 * G12 * (-y[i, j + 1] + y[i + 1, j + 1])))) / \
+                              (x[i + 1, j + 1] * (-y[i, j + 1] + y[i + 1, j]) + x[i + 1, j] * (
+                                          y[i, j + 1] - y[i + 1, j + 1]) + x[
+                                   i + 1, j] * (-y[i + 1, j] + y[i + 1, j + 1])) ** 3
+                        Fyy = (2 * Dk * (G11 * (x[i, j + 1] - x[i + 1, j + 1]) ** 2 +
+                                         (x[i + 1, j] - x[i + 1, j + 1]) * (
+                                                 G22 * (x[i + 1, j] - x[i + 1, j + 1]) + 2 * G12 * (
+                                                     -x[i, j + 1] + x[i + 1, j + 1]))) *
+                               ((x[i, j + 1] - x[i + 1, j + 1]) ** 2 + (y[i, j + 1] - y[i + 1, j + 1]) ** 2)) / \
+                              (x[i + 1, j + 1] * (-y[i, j + 1] + y[i + 1, j]) + x[i + 1, j] * (
+                                          y[i, j + 1] - y[i + 1, j + 1]) + x[
+                                   i + 1, j] * (-y[i + 1, j] + y[i + 1, j + 1])) ** 3
+                        Fxy = -((2 * Dk * ((x[i, j + 1] - x[i + 1, j + 1]) ** 2 + (y[i, j + 1] - y[i + 1, j + 1]) ** 2) *
+                                 (G11 * (x[i, j + 1] - x[i + 1, j + 1]) * (y[i, j + 1] - y[i + 1, j + 1]) +
+                                  G22 * (x[i + 1, j] - x[i + 1, j + 1]) * (y[i + 1, j] - y[i + 1, j + 1]) +
+                                  G12 * (-x[i + 1, j] * y[i, j + 1] + x[i + 1, j + 1] * y[i, j + 1] - x[i, j + 1] * y[
+                                             i + 1, j] +
+                                         x[i + 1, j + 1] * y[i + 1, j] + (x[i, j + 1] + x[i + 1, j] - 2 * x[i + 1, j + 1]) *
+                                         y[i + 1, j + 1])))) / \
+                              (x[i + 1, j + 1] * (-y[i, j + 1] + y[i + 1, j]) + x[i + 1, j] * (
+                                          y[i, j + 1] - y[i + 1, j + 1]) + x[
+                                   i + 1, j] * (-y[i + 1, j] + y[i + 1, j + 1])) ** 3
+                        Rx[i, j + 1] += Fx / weight
+                        Rxy[i, j + 1] += Fxy / weight
+                        Ry[i, j + 1] += Fy / weight
+                        Rxx[i, j + 1] += Fxx / weight
+                        Ryy[i, j + 1] += Fyy / weight
 
                 elif k == 2:    # rb corner perf xk = x[i+1, j], xk+1=x[i+1, j+1], xk-1=x[i, j]
                     G11 = ((X[i + 1, j + 1] - X[i, j + 1]) ** 2) + (Y[i + 1, j + 1] - Y[i, j + 1]) ** 2
@@ -835,74 +1031,167 @@ def functional2(grid_omega, grid_canon, grid_shape):
                     aproximation += Fk
 
                     # DERIVS:
+                    if i != 1 and j != 1 and i != nx - 2 and j != nx - 2:
+                        # xk : x[i + 1, j]
+                        Fx = (Dk * (-(-y[i, j] + y[i + 1, j + 1]) * (
+                                G11 * ((x[i, j] - x[i + 1, j]) ** 2 + (y[i, j] - y[i + 1, j]) ** 2) -
+                                2 * G12 * ((x[i, j] - x[i + 1, j]) * (x[i + 1, j + 1] - x[i + 1, j]) + (
+                                y[i, j] - y[i + 1, j]) * (
+                                                   y[i + 1, j + 1] - y[i + 1, j])) +
+                                G22 * ((x[i + 1, j + 1] - x[i + 1, j]) ** 2 + (y[i + 1, j + 1] - y[i + 1, j]) ** 2)) +
+                                    2 * (-G12 * (x[i, j] + x[i + 1, j + 1] - 2 * x[i + 1, j]) + G11 * (
+                                            x[i, j] - x[i + 1, j]) +
+                                         G22 * (x[i + 1, j + 1] - x[i + 1, j])) * (
+                                            x[i + 1, j] * (y[i, j] - y[i + 1, j + 1]) + x[i, j] * (
+                                            y[i + 1, j + 1] - y[i + 1, j]) +
+                                            x[i + 1, j + 1] * (-y[i, j] + y[i + 1, j])))) / \
+                             (x[i + 1, j] * (-y[i, j] + y[i + 1, j + 1]) + x[i + 1, j + 1] * (y[i, j] - y[i + 1, j]) + x[
+                                 i + 1, j] * (-y[i + 1, j + 1] + y[i + 1, j])) ** 2
+                        Fy = (Dk * (-(x[i, j] - x[i + 1, j + 1]) * (
+                                G11 * ((x[i, j] - x[i + 1, j]) ** 2 + (y[i, j] - y[i + 1, j]) ** 2) -
+                                2 * G12 * ((x[i, j] - x[i + 1, j]) * (x[i + 1, j + 1] - x[i + 1, j]) + (
+                                y[i, j] - y[i + 1, j]) * (
+                                                   y[i + 1, j + 1] - y[i + 1, j])) +
+                                G22 * ((x[i + 1, j + 1] - x[i + 1, j]) ** 2 + (y[i + 1, j + 1] - y[i + 1, j]) ** 2)) -
+                                    2 * (x[i + 1, j] * (y[i, j] - y[i + 1, j + 1]) + x[i, j] * (
+                                            y[i + 1, j + 1] - y[i + 1, j]) + x[
+                                             i, j + 1] * (-y[i, j] + y[i + 1, j])) *
+                                    (G12 * (y[i, j] + y[i + 1, j + 1] - 2 * y[i + 1, j]) + G11 * (
+                                            -y[i, j] + y[i + 1, j]) + G22 * (-y[i + 1, j + 1] + y[i + 1, j])))) / \
+                             (x[i + 1, j] * (-y[i, j] + y[i + 1, j + 1]) + x[i + 1, j + 1] * (y[i, j] - y[i + 1, j]) + x[
+                                 i + 1, j] * (-y[i + 1, j + 1] + y[i + 1, j])) ** 2
+                        Fxx = (2 * Dk * ((x[i, j] - x[i + 1, j + 1]) ** 2 + (y[i, j] - y[i + 1, j + 1]) ** 2) *
+                               (G11 * (y[i, j] - y[i + 1, j]) ** 2 + (y[i + 1, j + 1] - y[i + 1, j]) * (
+                                       G22 * (y[i + 1, j + 1] - y[i + 1, j]) +
+                                       2 * G12 * (-y[i, j] + y[i + 1, j])))) / \
+                              (x[i + 1, j] * (-y[i, j] + y[i + 1, j + 1]) + x[i + 1, j + 1] * (y[i, j] - y[i + 1, j]) + x[
+                                  i + 1, j] * (-y[i + 1, j + 1] + y[i + 1, j])) ** 3
+                        Fyy = (2 * Dk * (G11 * (x[i, j] - x[i + 1, j]) ** 2 + (x[i + 1, j + 1] - x[i + 1, j]) * (
+                                G22 * (x[i + 1, j + 1] - x[i + 1, j]) +
+                                2 * G12 * (-x[i, j] + x[i + 1, j]))) *
+                               ((x[i, j] - x[i + 1, j + 1]) ** 2 + (y[i, j] - y[i + 1, j + 1]) ** 2)) / \
+                              (x[i + 1, j] * (-y[i, j] + y[i + 1, j + 1]) + x[i + 1, j + 1] * (y[i, j] - y[i + 1, j]) + x[
+                                  i + 1, j] * (-y[i + 1, j + 1] + y[i + 1, j])) ** 3
+                        Fxy = -((2 * Dk * ((x[i, j] - x[i + 1, j + 1]) ** 2 + (y[i, j] - y[i + 1, j + 1]) ** 2) *
+                                 (G11 * (x[i, j] - x[i + 1, j]) * (y[i, j] - y[i + 1, j]) +
+                                  G22 * (x[i + 1, j + 1] - x[i + 1, j]) * (y[i + 1, j + 1] - y[i + 1, j]) +
+                                  G12 * (-x[i + 1, j + 1] * y[i, j] + x[i + 1, j] * y[i, j] - x[i, j] * y[i + 1, j + 1] +
+                                         x[i + 1, j] * y[i + 1, j + 1] + (x[i, j] + x[i + 1, j + 1] - 2 * x[i + 1, j]) * y[
+                                             i + 1, j]))) / (
+                                        x[i + 1, j] * (-y[i, j] + y[i + 1, j + 1]) + x[i + 1, j + 1] * (
+                                            y[i, j] - y[i + 1, j]) +
+                                        x[
+                                            i + 1, j] * (-y[i + 1, j + 1] + y[i + 1, j])) ** 3)
+                        Rx[i + 1, j] += Fx / weight
+                        Rxy[i + 1, j] += Fxy / weight
+                        Ry[i + 1, j] += Fy / weight
+                        Rxx[i + 1, j] += Fxx / weight
+                        Ryy[i + 1, j] += Fyy / weight
 
-                    # xk : x[i+1, j]
-                    V = Jk
-                    Ux = (1 / Dk) * (G22 * (2 * x[i, j + 1] - 2 * x[i + 1, j + 1]) - 2 * G12 * (
-                            2 * x[i, j + 1] - x[i + 1, j + 1] - x[i, j]) +
-                                     G11 * (2 * x[i, j + 1] - 2 * x[i, j]))
-                    Uy = (1 / Dk) * (G22 * (2 * y[i, j + 1] - 2 * y[i + 1, j + 1]) - 4 * G12 * (
-                            2 * y[i, j + 1] - y[i + 1, j + 1] - y[i, j]) +
-                                     G11 * (2 * y[i, j + 1] - 2 * y[i, j]))
-                    Uxx = (1 / Dk) * (2 * G22 - 4 * G12 + 2 * G11)
-                    Uyy = Uxx
-                    Vx = (y[i + 1, j + 1] - y[i, j + 1]) - (y[i, j] - y[i, j + 1])
-                    Vy = (x[i, j] - x[i, j + 1]) - (x[i + 1, j + 1] - x[i, j + 1])
-                    Vxx = Vyy = 0
-                    Fx = (Ux - Fk * Vx) / V
-                    Rx[i, j + 1] += Fx
-                    Fy = (Uy - Fk * Vy) / V
-                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
-                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
-                    Fxy = (-2 * Fx * Vy) / V
-                    Rxy[i, j + 1] += Fxy
-                    Ry[i, j + 1] += Fy
-                    Rxx[i, j + 1] += Fxx
-                    Ryy[i, j + 1] += Fyy
+                        # xk+1 : x[i + 1, j + 1]
+                        Fx = Dk * (-G11 * ((x[i, j] - x[i + 1, j]) ** 2 + (y[i, j] - y[i + 1, j]) ** 2) * (
+                                y[i, j] - y[i + 1, j]) +
+                                   2 * G12 * ((x[i, j] - x[i + 1, j]) ** 2 + (y[i, j] - y[i + 1, j]) ** 2) * (
+                                           y[i + 1, j + 1] - y[i + 1, j]) +
+                                   G22 * (x[i + 1, j + 1] ** 2 * (y[i, j] - y[i + 1, j]) +
+                                          2 * x[i, j] * x[i + 1, j] * (y[i + 1, j + 1] - y[i + 1, j]) -
+                                          (y[i, j] - y[i + 1, j]) * (y[i + 1, j + 1] - y[i + 1, j]) ** 2 +
+                                          x[i + 1, j] ** 2 * (y[i, j] - 2 * y[i + 1, j + 1] + y[i + 1, j]) +
+                                          2 * x[i + 1, j + 1] * (x[i + 1, j] * (-y[i, j] + y[i + 1, j + 1]) + x[i, j] * (
+                                                -y[i + 1, j + 1] + y[i + 1, j])))) / \
+                             (x[i + 1, j] * (-y[i, j] + y[i + 1, j + 1]) + x[i + 1, j + 1] * (y[i, j] - y[i + 1, j]) + x[
+                                 i + 1, j] * (-y[i + 1, j + 1] + y[i + 1, j])) ** 2
+                        Fy = Dk * (
+                                (-(-x[i, j] + x[i + 1, j]) * (
+                                        G11 * ((x[i, j] - x[i + 1, j]) ** 2 + (y[i, j] - y[i + 1, j]) ** 2)
+                                        - 2 * G12 * ((x[i, j] - x[i + 1, j]) * (x[i + 1, j + 1] - x[i + 1, j]) + (
+                                        y[i, j] - y[i + 1, j]) * (y[i + 1, j + 1] - y[i + 1, j]))
+                                        + G22 * ((x[i + 1, j + 1] - x[i + 1, j]) ** 2 + (
+                                            y[i + 1, j + 1] - y[i + 1, j]) ** 2)))
+                                + 2 * (x[i + 1, j] * (y[i, j] - y[i + 1, j + 1]) + x[i, j] * (
+                                    y[i + 1, j + 1] - y[i + 1, j]) + x[
+                                           i, j + 1] * (-y[i, j] + y[i + 1, j]))
+                                * (G12 * (y[i, j] - y[i + 1, j]) + G22 * (-y[i + 1, j + 1] + y[i + 1, j]))
+                        ) / (x[i + 1, j] * (-y[i, j] + y[i + 1, j + 1]) + x[i + 1, j + 1] * (y[i, j] - y[i + 1, j]) + x[
+                            i + 1, j] * (-y[i + 1, j + 1] + y[i + 1, j])) ** 2
+                        Fxx = 2 * Dk * ((x[i, j] - x[i + 1, j]) ** 2 + (y[i, j] - y[i + 1, j]) ** 2) * (
+                                G11 * (y[i, j] - y[i + 1, j]) ** 2 +
+                                (y[i + 1, j + 1] - y[i + 1, j]) * (
+                                        G22 * (y[i + 1, j + 1] - y[i + 1, j]) + 2 * G12 * (-y[i, j] + y[i + 1, j]))
+                        ) / (x[i + 1, j] * (-y[i, j] + y[i + 1, j + 1]) + x[i + 1, j + 1] * (y[i, j] - y[i + 1, j]) + x[
+                            i + 1, j] * (-y[i + 1, j + 1] + y[i + 1, j])) ** 3
+                        Fyy = (2 * Dk * (G11 * (x[i, j] - x[i + 1, j]) ** 2 +
+                                         (x[i + 1, j + 1] - x[i + 1, j]) * (
+                                                 G22 * (x[i + 1, j + 1] - x[i + 1, j]) + 2 * G12 * (
+                                                     -x[i, j] + x[i + 1, j]))) *
+                               ((x[i, j] - x[i + 1, j]) ** 2 + (y[i, j] - y[i + 1, j]) ** 2)) / \
+                              (x[i + 1, j] * (-y[i, j] + y[i + 1, j + 1]) + x[i + 1, j + 1] * (y[i, j] - y[i + 1, j]) + x[
+                                  i + 1, j] * (-y[i + 1, j + 1] + y[i + 1, j])) ** 3
+                        Fxy = (-2 * Dk * ((x[i, j] - x[i + 1, j]) ** 2 + (y[i, j] - y[i + 1, j]) ** 2) *
+                               (G11 * (x[i, j] - x[i + 1, j]) * (y[i, j] - y[i + 1, j]) +
+                                G22 * (x[i + 1, j + 1] - x[i + 1, j]) * (y[i + 1, j + 1] - y[i + 1, j]) +
+                                G12 * (-x[i + 1, j + 1] * y[i, j] + x[i + 1, j] * y[i, j] - x[i, j] * y[i + 1, j + 1] + x[
+                                           i, j] * y[i + 1, j + 1] +
+                                       (x[i, j] + x[i + 1, j + 1] - 2 * x[i + 1, j]) * y[i + 1, j])) *
+                               (x[i + 1, j] * (-y[i, j] + y[i + 1, j + 1]) + x[i + 1, j + 1] * (y[i, j] - y[i + 1, j]) + x[
+                                   i + 1, j] * (-y[i + 1, j + 1] + y[i + 1, j])) ** -3)
+                        Rx[i + 1, j + 1] += Fx / weight
+                        Rxy[i + 1, j + 1] += Fxy / weight
+                        Ry[i + 1, j + 1] += Fy / weight
+                        Rxx[i + 1, j + 1] += Fxx / weight
+                        Ryy[i + 1, j + 1] += Fyy / weight
 
-                    # xk+1 : x[i+1, j+1]
-                    V = Jk
-                    Ux = (1 / Dk) * (G22 * (2 * x[i + 1, j + 1] - 2 * x[i, j + 1]) - 2 * G12 * (
-                            x[i, j] - x[i, j + 1]))
-                    Uy = (1 / Dk) * (G22 * (2 * y[i + 1, j + 1] - 2 * y[i, j + 1]) - 2 * G12 * (
-                            y[i, j] - y[i, j + 1]))
-                    Uxx = (1 / Dk) * 2 * G22
-                    Uyy = Uxx
-                    Vx = (y[i, j] - y[i, j + 1])
-                    Vy = -(x[i, j] - x[i, j + 1])
-                    Vxx = Vyy = 0
-                    Fx = (Ux - Fk * Vx) / V
-                    Rx[i + 1, j + 1] += Fx
-                    Fy = (Uy - Fk * Vy) / V
-                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
-                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
-                    Fxy = (-2 * Fx * Vy) / V
-                    Rxy[i + 1, j + 1] += Fxy
-                    Ry[i + 1, j + 1] += Fy
-                    Rxx[i + 1, j + 1] += Fxx
-                    Ryy[i + 1, j + 1] += Fyy
-
-                    # xk-1 : x[i, j]
-                    V = Jk
-                    Ux = (1 / Dk) * (G22 * (2 * x[i, j] - 2 * x[i, j + 1]) - 2 * G12 * (
-                            x[i, j + 1] - x[i, j]))
-                    Uy = (1 / Dk) * (G22 * (2 * y[i, j] - 2 * y[i, j + 1]) - 2 * G12 * (
-                            y[i, j + 1] - y[i, j]))
-                    Uxx = (1 / Dk) * 2 * G11
-                    Uyy = Uxx
-                    Vx = (y[i, j] - y[i, j + 1])
-                    Vy = -(x[i, j + 1] - x[i, j])
-                    Vxx = Vyy = 0
-                    Fx = (Ux - Fk * Vx) / V
-                    Rx[i, j] += Fx
-                    Fy = (Uy - Fk * Vy) / V
-                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
-                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
-                    Fxy = (-2 * Fx * Vy) / V
-                    Rxy[i, j] += Fxy
-                    Ry[i, j] += Fy
-                    Rxx[i, j] += Fxx
-                    Ryy[i, j] += Fyy
+                        # xk-1 : x[i, j]
+                        Fx = (Dk * (-G11 * ((x[i, j] - x[i + 1, j]) ** 2 + (y[i, j] - y[i + 1, j]) ** 2) * (
+                                y[i, j] - y[i + 1, j]) +
+                                    2 * G12 * ((x[i, j] - x[i + 1, j]) ** 2 + (y[i, j] - y[i + 1, j]) ** 2) * (
+                                            y[i + 1, j + 1] - y[i + 1, j]) +
+                                    G22 * (x[i + 1, j + 1] ** 2 * (y[i, j] - y[i + 1, j]) +
+                                           2 * x[i, j] * x[i + 1, j] * (y[i + 1, j + 1] - y[i + 1, j]) -
+                                           (y[i, j] - y[i + 1, j]) * (y[i + 1, j + 1] - y[i + 1, j]) ** 2 +
+                                           x[i + 1, j] ** 2 * (y[i, j] - 2 * y[i + 1, j + 1] + y[i + 1, j]) +
+                                           2 * x[i + 1, j + 1] * (x[i + 1, j] * (-y[i, j] + y[i + 1, j + 1]) +
+                                                                  x[i, j] * (-y[i + 1, j + 1] + y[i + 1, j]))))) / \
+                             (x[i + 1, j] * (-y[i, j] + y[i + 1, j + 1]) + x[i + 1, j + 1] * (y[i, j] - y[i + 1, j]) + x[
+                                 i + 1, j] * (-y[i + 1, j + 1] + y[i + 1, j])) ** 2
+                        Fy = (Dk * (-(-x[i, j] + x[i + 1, j]) * (
+                                G11 * ((x[i, j] - x[i + 1, j]) ** 2 + (y[i, j] - y[i + 1, j]) ** 2) -
+                                2 * G12 * ((x[i, j] - x[i + 1, j]) * (x[i + 1, j + 1] - x[i + 1, j]) + (
+                                y[i, j] - y[i + 1, j]) * (
+                                                   y[i + 1, j + 1] - y[i + 1, j])) +
+                                G22 * ((x[i + 1, j + 1] - x[i + 1, j]) ** 2 + (y[i + 1, j + 1] - y[i + 1, j]) ** 2)) +
+                                    2 * (x[i + 1, j] * (y[i, j] - y[i + 1, j + 1]) + x[i, j] * (
+                                            y[i + 1, j + 1] - y[i + 1, j]) + x[
+                                             i, j + 1] * (-y[i, j] + y[i + 1, j])) *
+                                    (G12 * (y[i, j] - y[i + 1, j]) + G22 * (-y[i + 1, j + 1] + y[i + 1, j])))) / \
+                             (x[i + 1, j] * (-y[i, j] + y[i + 1, j + 1]) + x[i + 1, j + 1] * (y[i, j] - y[i + 1, j]) + x[
+                                 i + 1, j] * (-y[i + 1, j + 1] + y[i + 1, j])) ** 2
+                        Fxx = (2 * Dk * ((x[i, j] - x[i + 1, j]) ** 2 + (y[i, j] - y[i + 1, j]) ** 2) *
+                               (G11 * (y[i, j] - y[i + 1, j]) ** 2 + (y[i + 1, j + 1] - y[i + 1, j]) * (
+                                       G22 * (y[i + 1, j + 1] - y[i + 1, j]) +
+                                       2 * G12 * (-y[i, j] + y[i + 1, j])))) / \
+                              (x[i + 1, j] * (-y[i, j] + y[i + 1, j + 1]) + x[i + 1, j + 1] * (y[i, j] - y[i + 1, j]) + x[
+                                  i + 1, j] * (-y[i + 1, j + 1] + y[i + 1, j])) ** 3
+                        Fyy = (2 * Dk * (G11 * (x[i, j] - x[i + 1, j]) ** 2 +
+                                         (x[i + 1, j + 1] - x[i + 1, j]) * (
+                                                 G22 * (x[i + 1, j + 1] - x[i + 1, j]) + 2 * G12 * (
+                                                     -x[i, j] + x[i + 1, j]))) *
+                               ((x[i, j] - x[i + 1, j]) ** 2 + (y[i, j] - y[i + 1, j]) ** 2)) / \
+                              (x[i + 1, j] * (-y[i, j] + y[i + 1, j + 1]) + x[i + 1, j + 1] * (y[i, j] - y[i + 1, j]) + x[
+                                  i + 1, j] * (-y[i + 1, j + 1] + y[i + 1, j])) ** 3
+                        Fxy = -((2 * Dk * ((x[i, j] - x[i + 1, j]) ** 2 + (y[i, j] - y[i + 1, j]) ** 2) *
+                                 (G11 * (x[i, j] - x[i + 1, j]) * (y[i, j] - y[i + 1, j]) +
+                                  G22 * (x[i + 1, j + 1] - x[i + 1, j]) * (y[i + 1, j + 1] - y[i + 1, j]) +
+                                  G12 * (-x[i + 1, j + 1] * y[i, j] + x[i + 1, j] * y[i, j] - x[i, j] * y[i + 1, j + 1] +
+                                         x[i + 1, j] * y[i + 1, j + 1] + (x[i, j] + x[i + 1, j + 1] - 2 * x[i + 1, j]) * y[
+                                             i + 1, j])))) / \
+                              (x[i + 1, j] * (-y[i, j] + y[i + 1, j + 1]) + x[i + 1, j + 1] * (y[i, j] - y[i + 1, j]) + x[
+                                  i + 1, j] * (-y[i + 1, j + 1] + y[i + 1, j])) ** 3
+                        Rx[i, j] += Fx / weight
+                        Rxy[i, j] += Fxy / weight
+                        Ry[i, j] += Fy / weight
+                        Rxx[i, j] += Fxx / weight
+                        Ryy[i, j] += Fyy / weight
 
                 elif k == 3:    # lt corner perf xk=x[i+1, j], xk+1=x[i, j], xk-1=x[i+1, j+1]
                     G11 = (X[i, j] - X[i + 1, j]) ** 2 + (Y[i, j] - Y[i + 1, j]) ** 2
@@ -932,74 +1221,171 @@ def functional2(grid_omega, grid_canon, grid_shape):
                     aproximation += Fk
 
                     # DERIVS:
+                    if i != 1 and j != 1 and i != nx - 2 and j != nx - 2:
+                        # xk : x[i + 1, j]
+                        Fx = (Dk * (-(-y[i + 1, j + 1] + y[i, j]) * (
+                                G11 * ((x[i + 1, j + 1] - x[i + 1, j]) ** 2 + (y[i + 1, j + 1] - y[i + 1, j]) ** 2) -
+                                2 * G12 * ((x[i + 1, j + 1] - x[i + 1, j]) * (x[i, j] - x[i + 1, j]) + (
+                                y[i + 1, j + 1] - y[i + 1, j]) * (
+                                                   y[i, j] - y[i + 1, j])) +
+                                G22 * ((x[i, j] - x[i + 1, j]) ** 2 + (y[i, j] - y[i + 1, j]) ** 2)) +
+                                    2 * (-G12 * (x[i + 1, j + 1] + x[i, j] - 2 * x[i + 1, j]) + G11 * (
+                                            x[i + 1, j + 1] - x[i + 1, j]) +
+                                         G22 * (x[i, j] - x[i + 1, j])) * (
+                                            x[i + 1, j] * (y[i + 1, j + 1] - y[i, j]) + x[i + 1, j + 1] * (
+                                            y[i, j] - y[i + 1, j]) +
+                                            x[i, j] * (-y[i + 1, j + 1] + y[i + 1, j])))) / \
+                             (x[i + 1, j] * (-y[i + 1, j + 1] + y[i, j]) + x[i, j] * (y[i + 1, j + 1] - y[i + 1, j]) + x[
+                                 i + 1, j] * (-y[i, j] + y[i + 1, j])) ** 2
+                        Fy = (Dk * (-(x[i + 1, j + 1] - x[i, j]) * (
+                                G11 * ((x[i + 1, j + 1] - x[i + 1, j]) ** 2 + (y[i + 1, j + 1] - y[i + 1, j]) ** 2) -
+                                2 * G12 * ((x[i + 1, j + 1] - x[i + 1, j]) * (x[i, j] - x[i + 1, j]) + (
+                                y[i + 1, j + 1] - y[i + 1, j]) * (
+                                                   y[i, j] - y[i + 1, j])) +
+                                G22 * ((x[i, j] - x[i + 1, j]) ** 2 + (y[i, j] - y[i + 1, j]) ** 2)) -
+                                    2 * (x[i + 1, j] * (y[i + 1, j + 1] - y[i, j]) + x[i + 1, j + 1] * (
+                                            y[i, j] - y[i + 1, j]) + x[
+                                             i, j + 1] * (-y[i + 1, j + 1] + y[i + 1, j])) *
+                                    (G12 * (y[i + 1, j + 1] + y[i, j] - 2 * y[i + 1, j]) + G11 * (
+                                            -y[i + 1, j + 1] + y[i + 1, j]) + G22 * (-y[i, j] + y[i + 1, j])))) / \
+                             (x[i + 1, j] * (-y[i + 1, j + 1] + y[i, j]) + x[i, j] * (y[i + 1, j + 1] - y[i + 1, j]) + x[
+                                 i + 1, j] * (-y[i, j] + y[i + 1, j])) ** 2
+                        Fxx = (2 * Dk * ((x[i + 1, j + 1] - x[i, j]) ** 2 + (y[i + 1, j + 1] - y[i, j]) ** 2) *
+                               (G11 * (y[i + 1, j + 1] - y[i + 1, j]) ** 2 + (y[i, j] - y[i + 1, j]) * (
+                                       G22 * (y[i, j] - y[i + 1, j]) +
+                                       2 * G12 * (-y[i + 1, j + 1] + y[i + 1, j])))) / \
+                              (x[i + 1, j] * (-y[i + 1, j + 1] + y[i, j]) + x[i, j] * (y[i + 1, j + 1] - y[i + 1, j]) + x[
+                                  i + 1, j] * (-y[i, j] + y[i + 1, j])) ** 3
+                        Fyy = (2 * Dk * (G11 * (x[i + 1, j + 1] - x[i + 1, j]) ** 2 + (x[i, j] - x[i + 1, j]) * (
+                                G22 * (x[i, j] - x[i + 1, j]) +
+                                2 * G12 * (-x[i + 1, j + 1] + x[i + 1, j]))) *
+                               ((x[i + 1, j + 1] - x[i, j]) ** 2 + (y[i + 1, j + 1] - y[i, j]) ** 2)) / \
+                              (x[i + 1, j] * (-y[i + 1, j + 1] + y[i, j]) + x[i, j] * (y[i + 1, j + 1] - y[i + 1, j]) + x[
+                                  i + 1, j] * (-y[i, j] + y[i + 1, j])) ** 3
+                        Fxy = -((2 * Dk * ((x[i + 1, j + 1] - x[i, j]) ** 2 + (y[i + 1, j + 1] - y[i, j]) ** 2) *
+                                 (G11 * (x[i + 1, j + 1] - x[i + 1, j]) * (y[i + 1, j + 1] - y[i + 1, j]) +
+                                  G22 * (x[i, j] - x[i + 1, j]) * (y[i, j] - y[i + 1, j]) +
+                                  G12 * (-x[i, j] * y[i + 1, j + 1] + x[i + 1, j] * y[i + 1, j + 1] - x[i + 1, j + 1] * y[
+                                             i, j] +
+                                         x[i + 1, j] * y[i, j] + (x[i + 1, j + 1] + x[i, j] - 2 * x[i + 1, j]) * y[
+                                             i + 1, j]))) / (
+                                        x[i + 1, j] * (-y[i + 1, j + 1] + y[i, j]) + x[i, j] * (
+                                            y[i + 1, j + 1] - y[i + 1, j]) +
+                                        x[
+                                            i + 1, j] * (-y[i, j] + y[i + 1, j])) ** 3)
+                        Rx[i + 1, j] += Fx / weight
+                        Rxy[i + 1, j] += Fxy / weight
+                        Ry[i + 1, j] += Fy / weight
+                        Rxx[i + 1, j] += Fxx / weight
+                        Ryy[i + 1, j] += Fyy / weight
 
-                    # xk : x[i+1, j]
-                    V = Jk
-                    Ux = (1 / Dk) * (G22 * (2 * x[i + 1, j] - 2 * x[i, j]) - 2 * G12 * (
-                            2 * x[i + 1, j] - x[i, j] - x[i + 1, j + 1]) +
-                                     G11 * (2 * x[i + 1, j] - 2 * x[i + 1, j + 1]))
-                    Uy = (1 / Dk) * (G22 * (2 * y[i + 1, j] - 2 * y[i, j]) - 4 * G12 * (
-                            2 * y[i + 1, j] - y[i, j] - y[i + 1, j + 1]) +
-                                     G11 * (2 * y[i + 1, j] - 2 * y[i + 1, j + 1]))
-                    Uxx = (1 / Dk) * (2 * G22 - 4 * G12 + 2 * G11)
-                    Uyy = Uxx
-                    Vx = (y[i, j] - y[i + 1, j]) - (y[i + 1, j + 1] - y[i + 1, j])
-                    Vy = (x[i + 1, j + 1] - x[i + 1, j]) - (x[i, j] - x[i + 1, j])
-                    Vxx = Vyy = 0
-                    Fx = (Ux - Fk * Vx) / V
-                    Rx[i + 1, j] += Fx
-                    Fy = (Uy - Fk * Vy) / V
-                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
-                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
-                    Fxy = (-2 * Fx * Vy) / V
-                    Rxy[i + 1, j] += Fxy
-                    Ry[i + 1, j] += Fy
-                    Rxx[i + 1, j] += Fxx
-                    Ryy[i + 1, j] += Fyy
+                        # xk+1 : x[i, j]
+                        Fx = Dk * (-G11 * ((x[i + 1, j + 1] - x[i + 1, j]) ** 2 + (y[i + 1, j + 1] - y[i + 1, j]) ** 2) * (
+                                y[i + 1, j + 1] - y[i + 1, j]) +
+                                   2 * G12 * ((x[i + 1, j + 1] - x[i + 1, j]) ** 2 + (
+                                            y[i + 1, j + 1] - y[i + 1, j]) ** 2) * (
+                                           y[i, j] - y[i + 1, j]) +
+                                   G22 * (x[i, j] ** 2 * (y[i + 1, j + 1] - y[i + 1, j]) +
+                                          2 * x[i + 1, j + 1] * x[i + 1, j] * (y[i, j] - y[i + 1, j]) -
+                                          (y[i + 1, j + 1] - y[i + 1, j]) * (y[i, j] - y[i + 1, j]) ** 2 +
+                                          x[i + 1, j] ** 2 * (y[i + 1, j + 1] - 2 * y[i, j] + y[i + 1, j]) +
+                                          2 * x[i, j] * (x[i + 1, j] * (-y[i + 1, j + 1] + y[i, j]) + x[i + 1, j + 1] * (
+                                                -y[i, j] + y[i + 1, j])))) / \
+                             (x[i + 1, j] * (-y[i + 1, j + 1] + y[i, j]) + x[i, j] * (y[i + 1, j + 1] - y[i + 1, j]) + x[
+                                 i + 1, j] * (-y[i, j] + y[i + 1, j])) ** 2
+                        Fy = Dk * (
+                                (-(-x[i + 1, j + 1] + x[i + 1, j]) * (
+                                        G11 * ((x[i + 1, j + 1] - x[i + 1, j]) ** 2 + (y[i + 1, j + 1] - y[i + 1, j]) ** 2)
+                                        - 2 * G12 * ((x[i + 1, j + 1] - x[i + 1, j]) * (x[i, j] - x[i + 1, j]) + (
+                                        y[i + 1, j + 1] - y[i + 1, j]) * (y[i, j] - y[i + 1, j]))
+                                        + G22 * ((x[i, j] - x[i + 1, j]) ** 2 + (y[i, j] - y[i + 1, j]) ** 2)))
+                                + 2 * (x[i + 1, j] * (y[i + 1, j + 1] - y[i, j]) + x[i + 1, j + 1] * (
+                                    y[i, j] - y[i + 1, j]) + x[
+                                           i, j + 1] * (-y[i + 1, j + 1] + y[i + 1, j]))
+                                * (G12 * (y[i + 1, j + 1] - y[i + 1, j]) + G22 * (-y[i, j] + y[i + 1, j]))
+                        ) / (x[i + 1, j] * (-y[i + 1, j + 1] + y[i, j]) + x[i, j] * (y[i + 1, j + 1] - y[i + 1, j]) + x[
+                            i + 1, j] * (-y[i, j] + y[i + 1, j])) ** 2
+                        Fxx = 2 * Dk * ((x[i + 1, j + 1] - x[i + 1, j]) ** 2 + (y[i + 1, j + 1] - y[i + 1, j]) ** 2) * (
+                                G11 * (y[i + 1, j + 1] - y[i + 1, j]) ** 2 +
+                                (y[i, j] - y[i + 1, j]) * (
+                                        G22 * (y[i, j] - y[i + 1, j]) + 2 * G12 * (-y[i + 1, j + 1] + y[i + 1, j]))
+                        ) / (x[i + 1, j] * (-y[i + 1, j + 1] + y[i, j]) + x[i, j] * (y[i + 1, j + 1] - y[i + 1, j]) + x[
+                            i + 1, j] * (-y[i, j] + y[i + 1, j])) ** 3
+                        Fyy = (2 * Dk * (G11 * (x[i + 1, j + 1] - x[i + 1, j]) ** 2 +
+                                         (x[i, j] - x[i + 1, j]) * (
+                                                 G22 * (x[i, j] - x[i + 1, j]) + 2 * G12 * (
+                                                     -x[i + 1, j + 1] + x[i + 1, j]))) *
+                               ((x[i + 1, j + 1] - x[i + 1, j]) ** 2 + (y[i + 1, j + 1] - y[i + 1, j]) ** 2)) / \
+                              (x[i + 1, j] * (-y[i + 1, j + 1] + y[i, j]) + x[i, j] * (y[i + 1, j + 1] - y[i + 1, j]) + x[
+                                  i + 1, j] * (-y[i, j] + y[i + 1, j])) ** 3
+                        Fxy = (-2 * Dk * ((x[i + 1, j + 1] - x[i + 1, j]) ** 2 + (y[i + 1, j + 1] - y[i + 1, j]) ** 2) *
+                               (G11 * (x[i + 1, j + 1] - x[i + 1, j]) * (y[i + 1, j + 1] - y[i + 1, j]) +
+                                G22 * (x[i, j] - x[i + 1, j]) * (y[i, j] - y[i + 1, j]) +
+                                G12 * (-x[i, j] * y[i + 1, j + 1] + x[i + 1, j] * y[i + 1, j + 1] - x[i + 1, j + 1] * y[
+                                           i, j] + x[
+                                           i, j] * y[i, j] +
+                                       (x[i + 1, j + 1] + x[i, j] - 2 * x[i + 1, j]) * y[i + 1, j])) *
+                               (x[i + 1, j] * (-y[i + 1, j + 1] + y[i, j]) + x[i, j] * (y[i + 1, j + 1] - y[i + 1, j]) + x[
+                                   i + 1, j] * (-y[i, j] + y[i + 1, j])) ** -3)
+                        Rx[i, j] += Fx / weight
+                        Rxy[i, j] += Fxy / weight
+                        Ry[i, j] += Fy / weight
+                        Rxx[i, j] += Fxx / weight
+                        Ryy[i, j] += Fyy / weight
 
-                    # xk+1 : x[i, j]
-                    V = Jk
-                    Ux = (1 / Dk) * (G22 * (2 * x[i, j] - 2 * x[i + 1, j]) - 2 * G12 * (
-                            x[i + 1, j + 1] - x[i + 1, j]))
-                    Uy = (1 / Dk) * (G22 * (2 * y[i, j] - 2 * y[i + 1, j]) - 2 * G12 * (
-                            y[i + 1, j + 1] - y[i + 1, j]))
-                    Uxx = (1 / Dk) * 2 * G22
-                    Uyy = Uxx
-                    Vx = (y[i + 1, j + 1] - y[i + 1, j])
-                    Vy = -(x[i + 1, j + 1] - x[i + 1, j])
-                    Vxx = Vyy = 0
-                    Fx = (Ux - Fk * Vx) / V
-                    Rx[i, j] += Fx
-                    Fy = (Uy - Fk * Vy) / V
-                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
-                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
-                    Fxy = (-2 * Fx * Vy) / V
-                    Rxy[i, j] += Fxy
-                    Ry[i, j] += Fy
-                    Rxx[i, j] += Fxx
-                    Ryy[i, j] += Fyy
-
-                    # xk-1 : x[i+1, j+1]
-                    V = Jk
-                    Ux = (1 / Dk) * (G22 * (2 * x[i + 1, j + 1] - 2 * x[i + 1, j]) - 2 * G12 * (
-                            x[i, j] - x[i + 1, j]))
-                    Uy = (1 / Dk) * (G22 * (2 * y[i + 1, j + 1] - 2 * y[i + 1, j]) - 2 * G12 * (
-                            y[i, j] - y[i + 1, j]))
-                    Uxx = (1 / Dk) * 2 * G11
-                    Uyy = Uxx
-                    Vx = (y[i + 1, j + 1] - y[i + 1, j])
-                    Vy = -(x[i, j] - x[i + 1, j])
-                    Vxx = Vyy = 0
-                    Fx = (Ux - Fk * Vx) / V
-                    Rx[i + 1, j + 1] += Fx
-                    Fy = (Uy - Fk * Vy) / V
-                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
-                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
-                    Fxy = (-2 * Fx * Vy) / V
-                    Rxy[i + 1, j + 1] += Fxy
-                    Ry[i + 1, j + 1] += Fy
-                    Rxx[i + 1, j + 1] += Fxx
-                    Ryy[i + 1, j + 1] += Fyy
+                        # xk-1 : x[i + 1, j + 1]
+                        Fx = (Dk * (-G11 * ((x[i + 1, j + 1] - x[i + 1, j]) ** 2 + (y[i + 1, j + 1] - y[i + 1, j]) ** 2) * (
+                                y[i + 1, j + 1] - y[i + 1, j]) +
+                                    2 * G12 * ((x[i + 1, j + 1] - x[i + 1, j]) ** 2 + (
+                                            y[i + 1, j + 1] - y[i + 1, j]) ** 2) * (
+                                            y[i, j] - y[i + 1, j]) +
+                                    G22 * (x[i, j] ** 2 * (y[i + 1, j + 1] - y[i + 1, j]) +
+                                           2 * x[i + 1, j + 1] * x[i + 1, j] * (y[i, j] - y[i + 1, j]) -
+                                           (y[i + 1, j + 1] - y[i + 1, j]) * (y[i, j] - y[i + 1, j]) ** 2 +
+                                           x[i + 1, j] ** 2 * (y[i + 1, j + 1] - 2 * y[i, j] + y[i + 1, j]) +
+                                           2 * x[i, j] * (x[i + 1, j] * (-y[i + 1, j + 1] + y[i, j]) +
+                                                          x[i + 1, j + 1] * (-y[i, j] + y[i + 1, j]))))) / \
+                             (x[i + 1, j] * (-y[i + 1, j + 1] + y[i, j]) + x[i, j] * (y[i + 1, j + 1] - y[i + 1, j]) + x[
+                                 i + 1, j] * (-y[i, j] + y[i + 1, j])) ** 2
+                        Fy = (Dk * (-(-x[i + 1, j + 1] + x[i + 1, j]) * (
+                                G11 * ((x[i + 1, j + 1] - x[i + 1, j]) ** 2 + (y[i + 1, j + 1] - y[i + 1, j]) ** 2) -
+                                2 * G12 * ((x[i + 1, j + 1] - x[i + 1, j]) * (x[i, j] - x[i + 1, j]) + (
+                                y[i + 1, j + 1] - y[i + 1, j]) * (
+                                                   y[i, j] - y[i + 1, j])) +
+                                G22 * ((x[i, j] - x[i + 1, j]) ** 2 + (y[i, j] - y[i + 1, j]) ** 2)) +
+                                    2 * (x[i + 1, j] * (y[i + 1, j + 1] - y[i, j]) + x[i + 1, j + 1] * (
+                                            y[i, j] - y[i + 1, j]) + x[
+                                             i, j + 1] * (-y[i + 1, j + 1] + y[i + 1, j])) *
+                                    (G12 * (y[i + 1, j + 1] - y[i + 1, j]) + G22 * (-y[i, j] + y[i + 1, j])))) / \
+                             (x[i + 1, j] * (-y[i + 1, j + 1] + y[i, j]) + x[i, j] * (y[i + 1, j + 1] - y[i + 1, j]) + x[
+                                 i + 1, j] * (-y[i, j] + y[i + 1, j])) ** 2
+                        Fxx = (2 * Dk * ((x[i + 1, j + 1] - x[i + 1, j]) ** 2 + (y[i + 1, j + 1] - y[i + 1, j]) ** 2) *
+                               (G11 * (y[i + 1, j + 1] - y[i + 1, j]) ** 2 + (y[i, j] - y[i + 1, j]) * (
+                                       G22 * (y[i, j] - y[i + 1, j]) +
+                                       2 * G12 * (-y[i + 1, j + 1] + y[i + 1, j])))) / \
+                              (x[i + 1, j] * (-y[i + 1, j + 1] + y[i, j]) + x[i, j] * (y[i + 1, j + 1] - y[i + 1, j]) + x[
+                                  i + 1, j] * (-y[i, j] + y[i + 1, j])) ** 3
+                        Fyy = (2 * Dk * (G11 * (x[i + 1, j + 1] - x[i + 1, j]) ** 2 +
+                                         (x[i, j] - x[i + 1, j]) * (
+                                                 G22 * (x[i, j] - x[i + 1, j]) + 2 * G12 * (
+                                                     -x[i + 1, j + 1] + x[i + 1, j]))) *
+                               ((x[i + 1, j + 1] - x[i + 1, j]) ** 2 + (y[i + 1, j + 1] - y[i + 1, j]) ** 2)) / \
+                              (x[i + 1, j] * (-y[i + 1, j + 1] + y[i, j]) + x[i, j] * (y[i + 1, j + 1] - y[i + 1, j]) + x[
+                                  i + 1, j] * (-y[i, j] + y[i + 1, j])) ** 3
+                        Fxy = -((2 * Dk * ((x[i + 1, j + 1] - x[i + 1, j]) ** 2 + (y[i + 1, j + 1] - y[i + 1, j]) ** 2) *
+                                 (G11 * (x[i + 1, j + 1] - x[i + 1, j]) * (y[i + 1, j + 1] - y[i + 1, j]) +
+                                  G22 * (x[i, j] - x[i + 1, j]) * (y[i, j] - y[i + 1, j]) +
+                                  G12 * (-x[i, j] * y[i + 1, j + 1] + x[i + 1, j] * y[i + 1, j + 1] - x[i + 1, j + 1] * y[
+                                             i, j] +
+                                         x[i + 1, j] * y[i, j] + (x[i + 1, j + 1] + x[i, j] - 2 * x[i + 1, j]) * y[
+                                             i + 1, j])))) / \
+                              (x[i + 1, j] * (-y[i + 1, j + 1] + y[i, j]) + x[i, j] * (y[i + 1, j + 1] - y[i + 1, j]) + x[
+                                  i + 1, j] * (-y[i, j] + y[i + 1, j])) ** 3
+                        Rx[i + 1, j + 1] += Fx / weight
+                        Rxy[i + 1, j + 1] += Fxy / weight
+                        Ry[i + 1, j + 1] += Fy / weight
+                        Rxx[i + 1, j + 1] += Fxx / weight
+                        Ryy[i + 1, j + 1] += Fyy / weight
 
     if flag != 1:
         print("aproxim: ", aproximation/((nx-1)*(ny-1)*8))
@@ -1007,7 +1393,6 @@ def functional2(grid_omega, grid_canon, grid_shape):
 
 
 def mimimize(omega, canon, grid_shape, tau, eps, count=0):
-    flag = 0
     nx, ny = grid_shape
     Fk, Rx, Ry, Rxx, Ryy, Rxy, flag = functional2(omega, canon, grid_shape)
     x_old = omega[0]
@@ -1017,10 +1402,12 @@ def mimimize(omega, canon, grid_shape, tau, eps, count=0):
     x_new = x_old.copy()
     y_new = y_old.copy()
     maxdif = 0.0
-    for i in range(1, nx-1):
-        for j in range(1, ny-1):
-            x_new[i, j] = x_old[i, j] - tau * (Rx[i, j] * Ryy[i, j] - Ry[i, j] * Ryy[i, j])/((Rxx[i, j] * Ryy[i, j] - Rxy[i, j] * Rxy[i, j]))
-            y_new[i, j] = y_old[i, j] - tau * (Rx[i, j] * Ryy[i, j] - Ry[i, j] * Ryy[i, j])/((Rxx[i, j] * Ryy[i, j] - Rxy[i, j] * Rxy[i, j]))
+    for i in range(2, nx-1):
+        for j in range(2, ny-1):
+            x_new[i, j] = x_old[i, j] - tau * (Rx[i, j] * Ryy[i, j] - Ry[i, j] * Ryy[i, j]) / (
+                (Rxx[i, j] * Ryy[i, j] - Rxy[i, j] * Rxy[i, j]))
+            y_new[i, j] = y_old[i, j] - tau * (Rx[i, j] * Ryy[i, j] - Ry[i, j] * Ryy[i, j]) / (
+                (Rxx[i, j] * Ryy[i, j] - Rxy[i, j] * Rxy[i, j]))
             if abs(x_new[i, j] - x_old[i, j]) > maxdif:
                 maxdif = abs(x_new[i, j] - x_old[i, j])
             if abs(y_new[i, j] - y_old[i, j]) > maxdif:
@@ -1037,6 +1424,51 @@ def mimimize(omega, canon, grid_shape, tau, eps, count=0):
         else:
             count += 1
             return mimimize(np.array([x_new, y_new]), canon, grid_shape, tau, eps, count)
+
+
+def hooke_jeeves(omega, canon, shape, step_size, tolerance):
+    nx, ny = shape
+    best_value = 0
+    step = step_size
+    for global_steps in range(20):
+        for m in range(1, ny-1):
+            for n in range(1, nx-1):
+                current_step = step
+                current_x = omega[0][m, n]
+                current_y = omega[1][m, n]
+                print("x: ", current_x, "y: ", current_y)
+                best_x = current_x
+                best_y = current_y
+                current_value = functional2(omega, canon, shape)[0]
+                best_value = current_value
+
+                while current_step > tolerance:
+                    flag = False
+                    for i, (dx, dy) in enumerate([(current_step, 0), (-current_step, 0), (0, current_step), (0, -current_step)]):
+                        new_x_pos = current_x + dx
+                        new_y_pos = current_y + dy
+                        omega_test = omega.copy()
+                        omega_test[0][m, n] = new_x_pos
+                        omega_test[1][m, n] = new_y_pos
+                        new_value_pos = functional2(omega_test, canon, shape)[0]
+                        smooth_flag = functional2(omega_test, canon, shape)[6]
+
+                        if (new_value_pos < best_value) and (smooth_flag != 1):
+                            best_value = new_value_pos
+                            best_x = new_x_pos
+                            best_y = new_y_pos
+                            flag = True
+
+                    if not flag:
+                        current_step *= current_step - (current_step // 3)
+                    else:
+                        current_x = best_x
+                        current_y = best_y
+
+                omega[0][m, n] = current_x
+                omega[1][m, n] = current_y
+
+    return omega, best_value
 
 
 def plot_grid(grid, nx, ny, title):
@@ -1098,7 +1530,7 @@ plt.show()
 
 node2 = [11, 11, 0.6, 0.5]
 
-nx, ny = 20, 20
+nx, ny = 10, 10
 # canon_grid = implicit_transfinite_interpol(nx, sq_t1, sq_b1, sq_l1, sq_r1)
 # canon_grid, count = winslow_without_implicit(NX, Xyt, Xyb, Xyr, Xyl, treshhold)
 # canon_grid = transfinite_interpol(nx, Xyt, Xyb, Xyl, Xyr)
@@ -1107,29 +1539,33 @@ nx, ny = 20, 20
 canon_grid = implicit_transfinite_interpol(nx, sq_t1, sq_b1, sq_l1, sq_r1)
 canon_for_min = canon_grid
 
-"""for i in range(nx):
+for i in range(nx):
     for j in range(ny):
-        if i == (nx//2) - 1:
-            canon_grid[0][i][j] += 0.03
+        """if i == (nx//2) - 1:
+            canon_grid[0][i][j] += 0.04
         if j == (ny//2) - 1:
-            canon_grid[1][i][j] += 0.03
-        if i == (nx//3) - 1:
-            canon_grid[0][i][j] -= 0.03
-        if j == (ny//3) - 1:
-            canon_grid[1][i][j] -= 0.03
+            canon_grid[1][i][j] += 0.04
+        if i == (nx//2) - 1 and i != 0 and j != 0 and i != nx-1 and j != nx-1:
+            canon_grid[0][i][j] -= 0.04
+        if j == (ny//2) - 1 and i != 0 and j != 0 and i != nx-1 and j != nx-1:
+            canon_grid[1][i][j] -= 0.04"""
 
-        if i == 2:
-            canon_grid[0][i][j] += 0.03
+"""        if i == 2:
+            canon_grid[0][i][j] += 0.06
         if j == 2:
-            canon_grid[1][i][j] += 0.03
+            canon_grid[1][i][j] += 0.06
         if i == nx - 5:
-            canon_grid[0][i][j] -= 0.03
-        if j == ny - 5:
-            canon_grid[1][i][j] -= 0.03"""
+            canon_grid[0][i][j] -= 0.06
+        if j == ny - 5:     # and i != 0 and j != 0 and i != nx-1 and j != nx-1
+            canon_grid[1][i][j] -= 0.06"""
+"""for i in range(nx-1, -1, -1):
+    for j in range(ny):
+        if j != 0 and j != ny-1:
+            canon_grid[1][i][j] = canon_grid[1][i][j]**1.5 
 for i in range(nx-1, -1, -1):
     for j in range(ny):
         if i != 0 and i != ny-1:
-            canon_grid[0][i][j] = canon_grid[0][i][j]**2
+            canon_grid[0][i][j] = canon_grid[0][i][j]**1.5"""
 
 canon_grid[0] = np.flip(canon_grid[0], axis=0)
 canon_grid[1] = np.flip(canon_grid[1], axis=0)
@@ -1150,8 +1586,8 @@ for i in range(nx-1, -1, -1):
         print(round(canon_grid[1][i, j], 3), end="\t")
     print("\n")"""
 
-plt.plot(canon_grid[0], canon_grid[1], c="b", linewidth=1)
-plt.plot(np.transpose(canon_grid[0]), np.transpose(canon_grid[1]), c="b", linewidth=1)
+plt.plot(-np.transpose(canon_grid[1]), np.transpose(canon_grid[0]), c="b", linewidth=1)
+plt.plot(-canon_grid[1], canon_grid[0], c="b", linewidth=1)
 plt.show()
 
 """print(xx)
@@ -1159,13 +1595,12 @@ print("x ", xx[0, 0], xx[nx-1, ny-1])
 print("y ", yy[0, 0], yy[nx-1, ny-1])"""
 
 
-# omega_grid2, count = winslow_without_implicit(20, Xyt, Xyb, Xyr, Xyl, treshhold)
+# omega_grid2, count = winslow_without_implicit(nx, Xyt, Xyb, Xyr, Xyl, treshhold)
 # omega_grid2 = implicit_transfinite_interpol(nx, myt, myb, myr, myl)
 # omega_grid2 = transfinite_interpol(nx, Xyt, Xyb, Xyl, Xyr)
 # omega_grid2 = implicit_transfinite_interpol(nx, chevt, chevb, chevr, chevl)
 # omega_grid2 = transfinite_interpol(20, horst, horsb, horsr, horsl)
-omega_grid2 = implicit_transfinite_interpol(nx, myt, myb, myr, myl)
-# omega_grid2 = winslow_without_implicit(nx, Xyt, Xyb, Xyr, Xyl, treshhold)[0]
+omega_grid2 = winslow_without_implicit(nx, Xyt, Xyb, Xyr, Xyl, treshhold)[0]
 # omega_grid2 = implicit_transfinite_interpol(nx, sq_t1, sq_b1, sq_l1, sq_r1)
 # print("\n")
 # print(omega_grid2)
@@ -1195,10 +1630,14 @@ plot_grid(result, nx, ny, 'Optimized Grid')"""
 print("flag = ", flag)"""
 
 ### МЕЙН ВЫЗОВ ###
-new_grid = mimimize(omega_grid, canon_grid, (nx, ny), 1, 10**(-8))
+"""new_grid = mimimize(omega_grid, canon_grid, (nx, ny), 1, 10**(-8))"""
+"""new_grid, value = hooke_jeeves(omega_grid2, canon_grid, (nx, ny), 0.2, 0.001)"""
+new_grid = mimimize(omega_grid2, canon_grid, (nx, ny), 0.1, 0.0000001)
 plt.plot(new_grid[0], new_grid[1], c="b", linewidth=1)
 plt.plot(np.transpose(new_grid[0]), np.transpose(new_grid[1]), c="b", linewidth=1)
 plt.show()
+
+
 
 ### ТЕСТ АПРОКСИМАЦИИ ###
 """functional(omega_grid2, canon_grid, (nx, ny))
@@ -1226,4 +1665,3 @@ print("кол-во итераций: ", count)
 plt.plot(test[0], test[1], c="b", linewidth=1)
 plt.plot(np.transpose(test[0]), np.transpose(test[1]), c="b", linewidth=1)
 #plt.show()"""
-

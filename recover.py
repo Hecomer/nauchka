@@ -3,12 +3,41 @@ from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
 import math
 from scipy.optimize import minimize
+import sys
+sys.setrecursionlimit(10000)
+
+
+
 
 
 def find_intersection(f1, f2):
     intersection = fsolve(lambda x: f1(x) - f2(x), 0)
     xy = [intersection[0], f1(intersection[0])]
     return xy
+
+
+def Xnewt(s):
+    x = s
+    y = s**2 + 3
+    return np.array([x, y])
+
+
+def Xnewb(s):
+    x = s
+    y = s**2 - 3
+    return np.array([x, y])
+
+
+def Xnewl(s):
+    x = 0
+    y = s
+    return np.array([x, y])
+
+
+def Xnewr(s):
+    x = 1
+    y = s
+    return np.array([x, y])
 
 
 def Xyb(s):
@@ -201,6 +230,131 @@ def horsb(s):
     y = math.cos(math.pi/2*(1-2*s))
     xy = np.array([x, y])
     return xy
+
+
+def generate_boundary_points(n_points=50):
+    R = 1  # Радиус нижней полуокружности
+    a, b = 2, 9  # Полуоси верхнего эллипса
+
+    theta = np.linspace(0, np.pi, n_points)  # Углы для границ
+
+    # Нижняя граница (полуокружность)
+    x_lower = R * np.cos(theta)
+    y_lower = R * np.sin(theta)
+
+    # Верхняя граница (полуэллипс)
+    x_upper = a * np.cos(theta)
+    y_upper = b * np.sin(theta)
+
+    # Левые и правые границы (линии от нижних точек к верхним)
+    y_left = np.linspace(y_lower[0], y_upper[0], n_points)
+    y_right = np.linspace(y_lower[-1], y_upper[-1], n_points)
+    x_left = np.linspace(x_lower[0], x_upper[0], n_points)
+    x_right = np.linspace(x_lower[-1], x_upper[-1], n_points)
+    return x_upper, y_upper, x_lower, y_lower, x_right, y_right, x_left, y_left
+
+
+def lopatki_points(n_points):
+    x_left, x_right = -2, 3  # Границы по x
+    y_lower, y_shift = -3, 6  # Смещение верхней границы
+
+    # Нижняя граница - обрезанная парабола
+    x_lower = np.linspace(x_left + 0.5, x_right, n_points)  # Обрезка слева сильнее
+    y_lower = -0.5 * x_lower ** 2 + y_lower
+
+    # Верхняя граница - такая же парабола, сдвинутая вверх
+    x_upper = x_lower.copy()
+    y_upper = y_lower + y_shift
+
+    # Левые и правые границы (вертикальные линии)
+    y_left = np.linspace(y_lower[0], y_upper[0], n_points)
+    y_right = np.linspace(y_lower[-1], y_upper[-1], n_points)
+    x_left = np.linspace(x_lower[0], x_upper[0], n_points)
+    x_right = np.linspace(x_lower[-1], x_upper[-1], n_points)
+
+    return x_upper, y_upper, x_lower, y_lower, x_right, y_right, x_left, y_left
+
+
+def implicit_transfinite_new(discr, nod=None):
+    # nod = [x, y, xn, yn] - [положение в сетке по индексам, коорд в прве], по умолчанию не используется
+
+    m = discr
+    n = discr
+
+    t_x_val, t_y_val, b_x_val, b_y_val, r_x_val, r_y_val, l_x_val, l_y_val, = lopatki_points(discr)
+
+    X = np.zeros((m*n, m*n))  # матрица (позиция иксов исходя из дискретизации; иксы на этой позиции)
+    Y = np.zeros((m*m, m*n))
+    bx = np.zeros(m*n)
+    by = np.zeros(m*n)
+    for i in range(discr):
+        for j in range(discr):
+
+            gidx = i*discr + j
+
+            if j == 0:
+                X[gidx, i*discr + j] = 1.0
+                bx[gidx] = b_x_val[i]
+            elif j == discr - 1:
+                X[gidx, i*discr + j] = 1.0
+                bx[gidx] = t_x_val[i]
+            elif i == 0:
+                X[gidx, i*discr + j] = 1.0
+                bx[gidx] = l_x_val[j]
+            elif i == discr - 1:
+                X[gidx, i*discr + j] = 1.0
+                bx[gidx] = r_x_val[j]
+            elif nod != None and i == nod[0]-1 and j == nod[1]-1:
+                X[gidx, i * discr + j] = 1.0
+                bx[gidx] = nod[2]
+            else:
+                X[gidx, i * discr + j] = 1.0
+                X[gidx, (i-1) * discr + j] = -1/2
+                X[gidx, (i+1) * discr + j] = -1/2
+                X[gidx, i * discr + (j-1)] = -1/2
+                X[gidx, i * discr + (j+1)] = -1/2
+                X[gidx, (i+1) * discr + (j+1)] = 1/4
+                X[gidx, (i+1) * discr + (j-1)] = 1/4
+                X[gidx, (i-1) * discr + (j+1)] = 1/4
+                X[gidx, (i-1) * discr + (j-1)] = 1/4
+                bx[gidx] = 0.0
+    for i in range(discr):
+        for j in range(discr):
+            gidx = i*discr + j
+            if j == 0:
+                Y[gidx, i*discr + j] = 1.0
+                by[gidx] = b_y_val[i]
+            elif j == discr - 1:
+                Y[gidx, i*discr + j] = 1.0
+                by[gidx] = t_y_val[i]
+            elif i == 0:
+                Y[gidx, i*discr + j] = 1.0
+                by[gidx] = l_y_val[j]
+            elif i == discr - 1:
+                Y[gidx, i*discr + j] = 1.0
+                by[gidx] = r_y_val[j]
+            elif nod != None and i == nod[1]-1 and j == nod[0]-1:
+                Y[gidx, i * discr + j] = 1.0
+                by[gidx] = nod[3]
+            else:
+                Y[gidx, i * discr + j] = 1.0
+                Y[gidx, (i-1) * discr + j] = -1/2
+                Y[gidx, (i+1) * discr + j] = -1/2
+                Y[gidx, i * discr + (j-1)] = -1/2
+                Y[gidx, i * discr + (j+1)] = -1/2
+                Y[gidx, (i+1) * discr + (j+1)] = 1/4
+                Y[gidx, (i+1) * discr + (j-1)] = 1/4
+                Y[gidx, (i-1) * discr + (j+1)] = 1/4
+                Y[gidx, (i-1) * discr + (j-1)] = 1/4
+                by[gidx] = 0.0
+    X_res = (np.linalg.solve(X, bx)).reshape((n, m))
+    Y_res = (np.linalg.solve(Y, by)).reshape((n, m))
+    for i in range(n):
+        X_res[0, i] -= 3
+        X_res[-1, i] += 3
+        Y_res[0, i] = Y_res[1, i]
+        Y_res[-1, i] = Y_res[-2, i]
+    return [X_res, Y_res]
 
 
 def implicit_transfinite_interpol(discr, Xt, Xb, Xr, Xl, nod=None):
@@ -609,6 +763,7 @@ def functional2(grid_omega, grid_canon, grid_shape):
     Rxx = np.zeros((nx, ny))
     Ryy = np.zeros((nx, ny))
     Rxy = np.zeros((nx, ny))
+    weight = 1
 
     for i in range(nx - 1):
         for j in range(ny - 1):
@@ -642,69 +797,72 @@ def functional2(grid_omega, grid_canon, grid_shape):
                     # DERIVS:
 
                     # xk : x[i, j]
-                    d_alpha_dx = 2 * G22 * (x[i, j] - x[i, j + 1]) - 2 * G12 * (
-                                2 * x[i, j] - x[i, j + 1] - x[i + 1, j]) + 2 * G11 * (x[i, j] - x[i + 1, j])
-                    d_gamma_dy = 2 * G22 * (y[i, j] - y[i, j + 1]) - 2 * G12 * (
-                                2 * y[i, j] - y[i, j + 1] - y[i + 1, j]) + 2 * G11 * (y[i, j] - y[i + 1, j])
-                    dJk_dx = -(y[i + 1, j] - y[i, j]) + (y[i, j + 1] - y[i, j])
-                    dJk_dy = -(x[i + 1, j] - x[i, j]) + (x[i, j + 1] - x[i, j])
-                    dJk_dx_dy = -1
-                    Fx = (d_alpha_dx * Jk * Dk - (alpha + gamma) * dJk_dx * Dk) / (Jk ** 2 * Dk ** 2)
-                    Fy = (d_gamma_dy * Jk * Dk - (alpha + gamma) * dJk_dy * Dk) / (Jk ** 2 * Dk ** 2)
-
-                    # Вторая производная Fk по x[i, j]
-                    d2_alpha_dx2 = 2 * (G22 + G11 - 2 * G12)
-                    d2_gamma_dy2 = 2 * (G22 + G11 - 2 * G12)
-                    Fxx = d2_alpha_dx2 / (Jk * Dk)
-                    Fyy = d2_gamma_dy2 / (Jk * Dk)
-                    Fxy = -(alpha + gamma) / (Jk ** 2 * Dk ** 2)
-                    Rx[i, j] += Fx / 12
-                    Rxx[i, j] += Fxx / 12
-                    Ry[i, j] += Fy / 12
-                    Ryy[i, j] += Fyy / 12
-                    Rxy[i, j] += Fxy / 12
+                    V = Jk * Dk
+                    Ux = -2 * G11 * (x[i + 1, j] - x[i, j]) + 2 * G12 * (x[i, j + 1] - x[i, j]) - 2 * G22 *\
+                         (x[i, j + 1] - x[i, j])
+                    Uy = -2 * G11 * (y[i + 1, j] - y[i, j]) + 2 * G12 * (y[i, j + 1] - y[i, j]) - 2 * G22 * \
+                         (y[i, j + 1] - y[i, j])
+                    Uxx = (2 * G22 - 4 * G12 + 2 * G11)
+                    Uyy = Uxx
+                    Uxy = 0
+                    Vxy = 0
+                    Vx = (y[i + 1, j] - y[i, j + 1]) * Dk
+                    Vy = (x[i + 1, j] - x[i, j + 1]) * Dk
+                    Vxx = Vyy = 0
+                    Fx = (Ux - Fk * Vx) / V
+                    Fy = (Uy - Fk * Vy) / V
+                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
+                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
+                    Fxy = (Uxy - Fx * Vy - Fy * Vx - Fk * Vxy) / V
+                    Rx[i, j] += Fx / weight
+                    Rxy[i, j] += Fxy / weight
+                    Ry[i, j] += Fy / weight
+                    Rxx[i, j] += Fxx / weight
+                    Ryy[i, j] += Fyy / weight
 
                     # xk+1 : x[i, j + 1]
-                    d_alpha_dx = 2*G22*(x[i, j + 1] - x[i, j]) - 2*G12*(x[i + 1, j] - x[i, j])
-                    d_gamma_dy = 2*G22*(y[i, j + 1] - y[i, j]) - 2*G12*(y[i + 1, j] - y[i, j])
-                    dJk_dx = y[i + 1, j] - y[i, j]
-                    dJk_dy = x[i + 1, j] - x[i, j]
-                    dJk_dx_dy = -1
-                    Fx = (d_alpha_dx * Jk * Dk - (alpha + gamma) * dJk_dx * Dk) / (Jk ** 2 * Dk ** 2)
-                    Fy = (d_gamma_dy * Jk * Dk - (alpha + gamma) * dJk_dy * Dk) / (Jk ** 2 * Dk ** 2)
-
-                    # Вторая производная Fk по x[i, j + 1]
-                    d2_alpha_dx2 = 2 * (G22 + G11 - 2 * G12)
-                    d2_gamma_dy2 = 2 * (G22 + G11 - 2 * G12)
-                    Fxx = d2_alpha_dx2 / (Jk * Dk)
-                    Fyy = d2_gamma_dy2 / (Jk * Dk)
-                    Fxy = -(alpha + gamma) / (Jk ** 2 * Dk ** 2)
-                    Rx[i, j] += Fx / 12
-                    Rxx[i, j] += Fxx / 12
-                    Ry[i, j] += Fy / 12
-                    Ryy[i, j] += Fyy / 12
-                    Rxy[i, j] += Fxy / 12
+                    V = Jk * Dk
+                    Ux = -2 * G12 * (x[i + 1, j] - x[i, j]) + 2 * G22 * (x[i, j + 1] - x[i, j])
+                    Uy = -2 * G12 * (y[i + 1, j] - y[i, j]) + 2 * G22 * (y[i, j + 1] - y[i, j])
+                    Uxx = 2 * G22
+                    Uyy = Uxx
+                    Uxy = 0
+                    Vxy = 0
+                    Vx = (y[i + 1, j] - y[i, j]) * Dk
+                    Vy = (-x[i + 1, j] + x[i, j]) * Dk
+                    Vxx = Vyy = 0
+                    Fx = (Ux - Fk * Vx) / V
+                    Fy = (Uy - Fk * Vy) / V
+                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
+                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
+                    Fxy = (Uxy - Fx * Vy - Fy * Vx - Fk * Vxy) / V
+                    Rx[i, j + 1] += Fx / weight
+                    Rxy[i, j + 1] += Fxy / weight
+                    Ry[i, j + 1] += Fy / weight
+                    Rxx[i, j + 1] += Fxx / weight
+                    Ryy[i, j + 1] += Fyy / weight
 
                     # xk-1 : x[i + 1, j]
-                    d_alpha_dx = 2 * G22 * (x[i + 1, j] - x[i, j]) - 2 * G12 * (x[i, j + 1] - x[i, j])
-                    d_gamma_dy = 2 * G22 * (y[i + 1, j] - y[i, j]) - 2 * G12 * (y[i, j + 1] - y[i, j])
-                    dJk_dx = y[i, j + 1] - y[i, j]
-                    dJk_dy = x[i, j + 1] - y[i, j]
-                    dJk_dx_dy = -1
-                    Fx = (d_alpha_dx * Jk * Dk - (alpha + gamma) * dJk_dx * Dk) / (Jk ** 2 * Dk ** 2)
-                    Fy = (d_gamma_dy * Jk * Dk - (alpha + gamma) * dJk_dy * Dk) / (Jk ** 2 * Dk ** 2)
-
-                    # Вторая производная Fk по x[i + 1, j]
-                    d2_alpha_dx2 = 2 * (G22 + G11 - 2 * G12)
-                    d2_gamma_dy2 = 2 * (G22 + G11 - 2 * G12)
-                    Fxx = d2_alpha_dx2 / (Jk * Dk)
-                    Fyy = d2_gamma_dy2 / (Jk * Dk)
-                    Fxy = -(alpha + gamma) / (Jk ** 2 * Dk ** 2)
-                    Rx[i, j] += Fx / 12
-                    Rxx[i, j] += Fxx / 12
-                    Ry[i, j] += Fy / 12
-                    Ryy[i, j] += Fyy / 12
-                    Rxy[i, j] += Fxy / 12
+                    V = Jk * Dk
+                    Ux = 2 * G11 * (x[i + 1, j] - x[i, j]) - 2 * G12 * (x[i, j + 1] - x[i, j])
+                    Uy = 2 * G11 * (y[i + 1, j] - y[i, j]) - 2 * G12 * (y[i, j + 1] - y[i, j])
+                    Uxx = 2 * G11
+                    Uyy = Uxx
+                    Uxy = 0
+                    Vxy = 0
+                    Vx = (-y[i, j + 1] + y[i, j]) * Dk
+                    Vy = (x[i, j + 1] - x[i, j]) * Dk
+                    Vxx = Vyy = 0
+                    Fx = (Ux - Fk * Vx) / V
+                    Fy = (Uy - Fk * Vy) / V
+                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
+                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
+                    Fxy = (Uxy - Fx * Vy - Fy * Vx - Fk * Vxy) / V
+                    Rx[i + 1, j] += Fx / weight
+                    Rxy[i + 1, j] += Fxy / weight
+                    Ry[i + 1, j] += Fy / weight
+                    Rxx[i + 1, j] += Fxx / weight
+                    Ryy[i + 1, j] += Fyy / weight
 
                 elif k == 1:    # rt corner perf xk=x[i+1, j+1], xk+1=x[i+1, j], xk-1=x[i, j+1]
                     G11 = ((X[i + 1, j] - X[i + 1, j + 1]) ** 2) + (Y[i + 1, j] - Y[i + 1, j + 1]) ** 2
@@ -737,71 +895,74 @@ def functional2(grid_omega, grid_canon, grid_shape):
                     # DERIVS:
 
                     # xk : x[i + 1, j + 1]
-                    d_alpha_dx = 2 * G22 * (x[i + 1, j + 1] - x[i + 1, j]) - 2 * G12 * (
-                            2 * x[i + 1, j + 1] - x[i + 1, j] - x[i, j + 1]) + 2 * G11 * (x[i + 1, j + 1] - x[i, j + 1])
-                    d_gamma_dy = 2 * G22 * (y[i + 1, j + 1] - y[i + 1, j]) - 2 * G12 * (
-                            2 * y[i + 1, j + 1] - y[i + 1, j] - y[i, j + 1]) + 2 * G11 * (y[i + 1, j + 1] - y[i, j + 1])
-                    dJk_dx = -(y[i, j + 1] - y[i + 1, j]) + (y[i + 1, j + 1] - y[i + 1, j])
-                    dJk_dy = -(x[i, j + 1] - x[i + 1, j]) + (x[i + 1, j + 1] - x[i + 1, j])
-                    dJk_dx_dy = -1
-                    Fx = (d_alpha_dx * Jk * Dk - (alpha + gamma) * dJk_dx * Dk) / (Jk ** 2 * Dk ** 2)
-                    Fy = (d_gamma_dy * Jk * Dk - (alpha + gamma) * dJk_dy * Dk) / (Jk ** 2 * Dk ** 2)
-
-                    # Вторая производная Fk по x[i + 1, j + 1]
-                    d2_alpha_dx2 = 2 * (G22 + G11 - 2 * G12)
-                    d2_gamma_dy2 = 2 * (G22 + G11 - 2 * G12)
-                    Fxx = d2_alpha_dx2 / (Jk * Dk)
-                    Fyy = d2_gamma_dy2 / (Jk * Dk)
-                    Fxy = -(alpha + gamma) / (Jk ** 2 * Dk ** 2)
-                    Rx[i + 1, j + 1] += Fx / 12
-                    Rxx[i + 1, j + 1] += Fxx / 12
-                    Ry[i + 1, j + 1] += Fy / 12
-                    Ryy[i + 1, j + 1] += Fyy / 12
-                    Rxy[i + 1, j + 1] += Fxy / 12
+                    V = Jk * Dk
+                    Ux = -2 * G11 * (x[i, j + 1] - x[i + 1, j + 1]) + 2 * G12 * (x[i + 1, j] - x[i + 1, j + 1]) - 2 * G22 * \
+                         (x[i + 1, j] - x[i + 1, j + 1])
+                    Uy = -2 * G11 * (y[i, j + 1] - y[i + 1, j + 1]) + 2 * G12 * (y[i + 1, j] - y[i + 1, j + 1]) - 2 * G22 * \
+                         (y[i + 1, j] - y[i + 1, j + 1])
+                    Uxx = (2 * G22 - 4 * G12 + 2 * G11)
+                    Uyy = Uxx
+                    Uxy = 0
+                    Vxy = 0
+                    Vx = (y[i, j + 1] - y[i + 1, j]) * Dk
+                    Vy = (x[i, j + 1] - x[i + 1, j]) * Dk
+                    Vxx = Vyy = 0
+                    Fx = (Ux - Fk * Vx) / V
+                    Fy = (Uy - Fk * Vy) / V
+                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
+                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
+                    Fxy = (Uxy - Fx * Vy - Fy * Vx - Fk * Vxy) / V
+                    Rx[i + 1, j + 1] += Fx / weight
+                    Rxy[i + 1, j + 1] += Fxy / weight
+                    Ry[i + 1, j + 1] += Fy / weight
+                    Rxx[i + 1, j + 1] += Fxx / weight
+                    Ryy[i + 1, j + 1] += Fyy / weight
 
                     # xk+1 : x[i + 1, j]
-                    d_alpha_dx = 2 * G22 * (x[i + 1, j] - x[i + 1, j + 1]) - 2 * G12 * (x[i, j + 1] - x[i + 1, j + 1])
-                    d_gamma_dy = 2 * G22 * (y[i + 1, j] - y[i + 1, j + 1]) - 2 * G12 * (y[i, j + 1] - y[i + 1, j + 1])
-                    dJk_dx = y[i, j + 1] - y[i + 1, j + 1]
-                    dJk_dy = x[i, j + 1] - x[i + 1, j + 1]
-                    dJk_dx_dy = -1
-                    Fx = (d_alpha_dx * Jk * Dk - (alpha + gamma) * dJk_dx * Dk) / (Jk ** 2 * Dk ** 2)
-                    Fy = (d_gamma_dy * Jk * Dk - (alpha + gamma) * dJk_dy * Dk) / (Jk ** 2 * Dk ** 2)
-
-                    # Вторая производная Fk по x[i + 1, j]
-                    d2_alpha_dx2 = 2 * (G22 + G11 - 2 * G12)
-                    d2_gamma_dy2 = 2 * (G22 + G11 - 2 * G12)
-                    Fxx = d2_alpha_dx2 / (Jk * Dk)
-                    Fyy = d2_gamma_dy2 / (Jk * Dk)
-                    Fxy = -(alpha + gamma) / (Jk ** 2 * Dk ** 2)
-                    Rx[i + 1, j] += Fx / 12
-                    Rxx[i + 1, j] += Fxx / 12
-                    Ry[i + 1, j] += Fy / 12
-                    Ryy[i + 1, j] += Fyy / 12
-                    Rxy[i + 1, j] += Fxy / 12
+                    V = Jk * Dk
+                    Ux = -2 * G12 * (x[i, j + 1] - x[i + 1, j + 1]) + 2 * G22 * (x[i + 1, j] - x[i + 1, j + 1])
+                    Uy = -2 * G12 * (y[i, j + 1] - y[i + 1, j + 1]) + 2 * G22 * (y[i + 1, j] - y[i + 1, j + 1])
+                    Uxx = 2 * G22
+                    Uyy = Uxx
+                    Uxy = 0
+                    Vxy = 0
+                    Vx = (y[i, j + 1] - y[i + 1, j + 1]) * Dk
+                    Vy = (-x[i, j + 1] + x[i + 1, j + 1]) * Dk
+                    Vxx = Vyy = 0
+                    Fx = (Ux - Fk * Vx) / V
+                    Fy = (Uy - Fk * Vy) / V
+                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
+                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
+                    Fxy = (Uxy - Fx * Vy - Fy * Vx - Fk * Vxy) / V
+                    Rx[i + 1, j] += Fx / weight
+                    Rxy[i + 1, j] += Fxy / weight
+                    Ry[i + 1, j] += Fy / weight
+                    Rxx[i + 1, j] += Fxx / weight
+                    Ryy[i + 1, j] += Fyy / weight
 
                     # xk-1 : x[i, j + 1]
-                    d_alpha_dx = 2 * G22 * (x[i, j + 1] - x[i + 1, j + 1]) - 2 * G12 * (x[i + 1, j] - x[i + 1, j + 1])
-                    d_gamma_dy = 2 * G22 * (y[i, j + 1] - y[i + 1, j + 1]) - 2 * G12 * (y[i + 1, j] - y[i + 1, j + 1])
-                    dJk_dx = y[i + 1, j] - y[i + 1, j + 1]
-                    dJk_dy = x[i + 1, j] - x[i + 1, j + 1]
-                    dJk_dx_dy = -1
-                    Fx = (d_alpha_dx * Jk * Dk - (alpha + gamma) * dJk_dx * Dk) / (Jk ** 2 * Dk ** 2)
-                    Fy = (d_gamma_dy * Jk * Dk - (alpha + gamma) * dJk_dy * Dk) / (Jk ** 2 * Dk ** 2)
+                    V = Jk * Dk
+                    Ux = 2 * G11 * (x[i, j + 1] - x[i + 1, j + 1]) - 2 * G12 * (x[i + 1, j] - x[i + 1, j + 1])
+                    Uy = 2 * G11 * (y[i, j + 1] - y[i + 1, j + 1]) - 2 * G12 * (y[i + 1, j] - y[i + 1, j + 1])
+                    Uxx = 2 * G11
+                    Uyy = Uxx
+                    Uxy = 0
+                    Vxy = 0
+                    Vx = (-y[i + 1, j] + y[i + 1, j + 1]) * Dk
+                    Vy = (x[i + 1, j] - x[i + 1, j + 1]) * Dk
+                    Vxx = Vyy = 0
+                    Fx = (Ux - Fk * Vx) / V
+                    Fy = (Uy - Fk * Vy) / V
+                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
+                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
+                    Fxy = (Uxy - Fx * Vy - Fy * Vx - Fk * Vxy) / V
+                    Rx[i, j + 1] += Fx / weight
+                    Rxy[i, j + 1] += Fxy / weight
+                    Ry[i, j + 1] += Fy / weight
+                    Rxx[i, j + 1] += Fxx / weight
+                    Ryy[i, j + 1] += Fyy / weight
 
-                    # Вторая производная Fk по x[i, j + 1]
-                    d2_alpha_dx2 = 2 * (G22 + G11 - 2 * G12)
-                    d2_gamma_dy2 = 2 * (G22 + G11 - 2 * G12)
-                    Fxx = d2_alpha_dx2 / (Jk * Dk)
-                    Fyy = d2_gamma_dy2 / (Jk * Dk)
-                    Fxy = -(alpha + gamma) / (Jk ** 2 * Dk ** 2)
-                    Rx[i, j + 1] += Fx / 12
-                    Rxx[i, j + 1] += Fxx / 12
-                    Ry[i, j + 1] += Fy / 12
-                    Ryy[i, j + 1] += Fyy / 12
-                    Rxy[i, j + 1] += Fxy / 12
-
-                elif k == 2:    # rb corner perf xk = x[i+1, j], xk+1=x[i+1, j+1], xk-1=x[i, j]
+                elif k == 2:    # rb corner perf xk = x[i, j + 1], xk+1=x[i+1, j+1], xk-1=x[i, j]
                     G11 = ((X[i + 1, j + 1] - X[i, j + 1]) ** 2) + (Y[i + 1, j + 1] - Y[i, j + 1]) ** 2
                     G12 = (X[i + 1, j + 1] - X[i, j + 1]) * (X[i, j] - X[i, j + 1]) + (
                             Y[i + 1, j + 1] - Y[i, j + 1]) * (
@@ -829,70 +990,73 @@ def functional2(grid_omega, grid_canon, grid_shape):
 
                     # DERIVS:
 
-                    # xk : x[i+1, j]
-                    d_alpha_dx = 2 * G22 * (x[i + 1, j] - x[i + 1, j + 1]) - 2 * G12 * (
-                                2 * x[i + 1, j] - x[i + 1, j + 1] - x[i, j]) + 2 * G11 * (x[i + 1, j] - x[i, j])
-                    d_gamma_dy = 2 * G22 * (y[i + 1, j] - y[i + 1, j + 1]) - 2 * G12 * (
-                                2 * y[i + 1, j] - y[i + 1, j + 1] - y[i, j]) + 2 * G11 * (y[i + 1, j] - y[i, j])
-                    dJk_dx = -(y[i, j] - y[i + 1, j]) + (y[i + 1, j + 1] - y[i + 1, j])
-                    dJk_dy = -(x[i, j] - x[i + 1, j]) + (x[i + 1, j + 1] - x[i + 1, j])
-                    dJk_dx_dy = -1
-                    Fx = (d_alpha_dx * Jk * Dk - (alpha + gamma) * dJk_dx * Dk) / (Jk ** 2 * Dk ** 2)
-                    Fy = (d_gamma_dy * Jk * Dk - (alpha + gamma) * dJk_dy * Dk) / (Jk ** 2 * Dk ** 2)
+                    # xk : x[i , j + 1]
+                    V = Jk * Dk
+                    Ux = -2 * G11 * (x[i, j] - x[i, j + 1]) + 2 * G12 * (x[i + 1, j + 1] - x[i, j + 1]) - 2 * G22 * \
+                         (x[i + 1, j + 1] - x[i, j + 1])
+                    Uy = -2 * G11 * (y[i, j] - y[i, j + 1]) + 2 * G12 * (y[i + 1, j + 1] - y[i, j + 1]) - 2 * G22 * \
+                         (y[i + 1, j + 1] - y[i, j + 1])
+                    Uxx = (2 * G22 - 4 * G12 + 2 * G11)
+                    Uyy = Uxx
+                    Uxy = 0
+                    Vxy = 0
+                    Vx = (y[i, j] - y[i + 1, j + 1]) * Dk
+                    Vy = (x[i, j] - x[i + 1, j + 1]) * Dk
+                    Vxx = Vyy = 0
+                    Fx = (Ux - Fk * Vx) / V
+                    Fy = (Uy - Fk * Vy) / V
+                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
+                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
+                    Fxy = (Uxy - Fx * Vy - Fy * Vx - Fk * Vxy) / V
+                    Rx[i, j + 1] += Fx / weight
+                    Rxy[i, j + 1] += Fxy / weight
+                    Ry[i, j + 1] += Fy / weight
+                    Rxx[i, j + 1] += Fxx / weight
+                    Ryy[i, j + 1] += Fyy / weight
 
-                    # Вторая производная Fk по x[i+1, j]
-                    d2_alpha_dx2 = 2 * (G22 + G11 - 2 * G12)
-                    d2_gamma_dy2 = 2 * (G22 + G11 - 2 * G12)
-                    Fxx = d2_alpha_dx2 / (Jk * Dk)
-                    Fyy = d2_gamma_dy2 / (Jk * Dk)
-                    Fxy = -(alpha + gamma) / (Jk ** 2 * Dk ** 2)
-                    Rx[i + 1, j] += Fx / 12
-                    Rxx[i + 1, j] += Fxx / 12
-                    Ry[i + 1, j] += Fy / 12
-                    Ryy[i + 1, j] += Fyy / 12
-                    Rxy[i + 1, j] += Fxy / 12
-
-                    # xk+1 : x[i+1, j+1]
-                    d_alpha_dx = 2 * G22 * (x[i + 1, j + 1] - x[i + 1, j]) - 2 * G12 * (x[i, j] - x[i + 1, j])
-                    d_gamma_dy = 2 * G22 * (y[i + 1, j + 1] - y[i + 1, j]) - 2 * G12 * (y[i, j] - y[i + 1, j])
-                    dJk_dx = y[i, j] - y[i + 1, j]
-                    dJk_dy = x[i, j] - x[i + 1, j]
-                    dJk_dx_dy = -1
-                    Fx = (d_alpha_dx * Jk * Dk - (alpha + gamma) * dJk_dx * Dk) / (Jk ** 2 * Dk ** 2)
-                    Fy = (d_gamma_dy * Jk * Dk - (alpha + gamma) * dJk_dy * Dk) / (Jk ** 2 * Dk ** 2)
-
-                    # Вторая производная Fk по x[i+1, j+1]
-                    d2_alpha_dx2 = 2 * (G22 + G11 - 2 * G12)
-                    d2_gamma_dy2 = 2 * (G22 + G11 - 2 * G12)
-                    Fxx = d2_alpha_dx2 / (Jk * Dk)
-                    Fyy = d2_gamma_dy2 / (Jk * Dk)
-                    Fxy = -(alpha + gamma) / (Jk ** 2 * Dk ** 2)
-                    Rx[i + 1, j] += Fx / 12
-                    Rxx[i + 1, j] += Fxx / 12
-                    Ry[i + 1, j] += Fy / 12
-                    Ryy[i + 1, j] += Fyy / 12
-                    Rxy[i + 1, j] += Fxy / 12
+                    # xk+1 : x[i + 1, j + 1]
+                    V = Jk * Dk
+                    Ux = -2 * G12 * (x[i, j] - x[i, j + 1]) + 2 * G22 * (x[i + 1, j + 1] - x[i, j + 1])
+                    Uy = -2 * G12 * (y[i, j] - y[i, j + 1]) + 2 * G22 * (y[i + 1, j + 1] - y[i, j + 1])
+                    Uxx = 2 * G22
+                    Uyy = Uxx
+                    Uxy = 0
+                    Vxy = 0
+                    Vx = (y[i, j] - y[i, j + 1]) * Dk
+                    Vy = (-x[i, j] + x[i, j + 1]) * Dk
+                    Vxx = Vyy = 0
+                    Fx = (Ux - Fk * Vx) / V
+                    Fy = (Uy - Fk * Vy) / V
+                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
+                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
+                    Fxy = (Uxy - Fx * Vy - Fy * Vx - Fk * Vxy) / V
+                    Rx[i + 1, j + 1] += Fx / weight
+                    Rxy[i + 1, j + 1] += Fxy / weight
+                    Ry[i + 1, j + 1] += Fy / weight
+                    Rxx[i + 1, j + 1] += Fxx / weight
+                    Ryy[i + 1, j + 1] += Fyy / weight
 
                     # xk-1 : x[i, j]
-                    d_alpha_dx = 2 * G22 * (x[i, j] - x[i + 1, j]) - 2 * G12 * (x[i + 1, j + 1] - x[i + 1, j])
-                    d_gamma_dy = 2 * G22 * (y[i, j] - y[i + 1, j]) - 2 * G12 * (y[i + 1, j + 1] - y[i + 1, j])
-                    dJk_dx = y[i + 1, j + 1] - y[i + 1, j]
-                    dJk_dy = x[i + 1, j + 1] - y[i + 1, j]
-                    dJk_dx_dy = -1
-                    Fx = (d_alpha_dx * Jk * Dk - (alpha + gamma) * dJk_dx * Dk) / (Jk ** 2 * Dk ** 2)
-                    Fy = (d_gamma_dy * Jk * Dk - (alpha + gamma) * dJk_dy * Dk) / (Jk ** 2 * Dk ** 2)
-
-                    # Вторая производная Fk по x[i, j]
-                    d2_alpha_dx2 = 2 * (G22 + G11 - 2 * G12)
-                    d2_gamma_dy2 = 2 * (G22 + G11 - 2 * G12)
-                    Fxx = d2_alpha_dx2 / (Jk * Dk)
-                    Fyy = d2_gamma_dy2 / (Jk * Dk)
-                    Fxy = -(alpha + gamma) / (Jk ** 2 * Dk ** 2)
-                    Rx[i + 1, j] += Fx / 12
-                    Rxx[i + 1, j] += Fxx / 12
-                    Ry[i + 1, j] += Fy / 12
-                    Ryy[i + 1, j] += Fyy / 12
-                    Rxy[i + 1, j] += Fxy / 12
+                    V = Jk * Dk
+                    Ux = 2 * G11 * (x[i, j] - x[i, j + 1]) - 2 * G12 * (x[i + 1, j + 1] - x[i, j + 1])
+                    Uy = 2 * G11 * (y[i, j] - y[i, j + 1]) - 2 * G12 * (y[i + 1, j + 1] - y[i, j + 1])
+                    Uxx = 2 * G11
+                    Uyy = Uxx
+                    Uxy = 0
+                    Vxy = 0
+                    Vx = (-y[i + 1, j + 1] + y[i, j + 1]) * Dk
+                    Vy = (x[i + 1, j + 1] - x[i, j + 1]) * Dk
+                    Vxx = Vyy = 0
+                    Fx = (Ux - Fk * Vx) / V
+                    Fy = (Uy - Fk * Vy) / V
+                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
+                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
+                    Fxy = (Uxy - Fx * Vy - Fy * Vx - Fk * Vxy) / V
+                    Rx[i, j] += Fx / weight
+                    Rxy[i, j] += Fxy / weight
+                    Ry[i, j] += Fy / weight
+                    Rxx[i, j] += Fxx / weight
+                    Ryy[i, j] += Fyy / weight
 
                 elif k == 3:    # lt corner perf xk=x[i+1, j], xk+1=x[i, j], xk-1=x[i+1, j+1]
                     G11 = (X[i, j] - X[i + 1, j]) ** 2 + (Y[i, j] - Y[i + 1, j]) ** 2
@@ -923,107 +1087,77 @@ def functional2(grid_omega, grid_canon, grid_shape):
 
                     # DERIVS:
 
-                    # xk : x[i+1, j]
-                    V = Jk
-                    Ux = (1 / Dk) * (G22 * (2 * x[i + 1, j] - 2 * x[i, j]) - 2 * G12 * (
-                            2 * x[i + 1, j] - x[i, j] - x[i + 1, j + 1]) +
-                                     G11 * (2 * x[i + 1, j] - 2 * x[i + 1, j + 1]))
-                    Uy = (1 / Dk) * (G22 * (2 * y[i + 1, j] - 2 * y[i, j]) - 4 * G12 * (
-                            2 * y[i + 1, j] - y[i, j] - y[i + 1, j + 1]) +
-                                     G11 * (2 * y[i + 1, j] - 2 * y[i + 1, j + 1]))
-                    Uxx = (1 / Dk) * (2 * G22 - 4 * G12 + 2 * G11)
+                    # xk : x[i + 1, j]
+                    V = Jk * Dk
+                    Ux = -2 * G11 * (x[i + 1, j + 1] - x[i + 1, j]) + 2 * G12 * (x[i, j] - x[i + 1, j]) - 2 * G22 * \
+                         (x[i, j] - x[i + 1, j])
+                    Uy = -2 * G11 * (y[i + 1, j + 1] - y[i + 1, j]) + 2 * G12 * (y[i, j] - y[i + 1, j]) - 2 * G22 * \
+                         (y[i, j] - y[i + 1, j])
+                    Uxx = (2 * G22 - 4 * G12 + 2 * G11)
                     Uyy = Uxx
-                    Vx = (y[i, j] - y[i + 1, j]) - (y[i + 1, j + 1] - y[i + 1, j])
-                    Vy = (x[i + 1, j + 1] - x[i + 1, j]) - (x[i, j] - x[i + 1, j])
+                    Uxy = 0
+                    Vxy = 0
+                    Vx = (y[i + 1, j + 1] - y[i, j]) * Dk
+                    Vy = (x[i + 1, j + 1] - x[i, j]) * Dk
                     Vxx = Vyy = 0
                     Fx = (Ux - Fk * Vx) / V
-                    Rx[i + 1, j] += Fx/12
                     Fy = (Uy - Fk * Vy) / V
                     Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
                     Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
-                    Fxy = (-2 * Fx * Vy) / V
-                    Rxy[i + 1, j] += Fxy/12
-                    Ry[i + 1, j] += Fy/12
-                    Rxx[i + 1, j] += Fxx/12
-                    Ryy[i + 1, j] += Fyy/12
+                    Fxy = (Uxy - Fx * Vy - Fy * Vx - Fk * Vxy) / V
+                    Rx[i + 1, j] += Fx / weight
+                    Rxy[i + 1, j] += Fxy / weight
+                    Ry[i + 1, j] += Fy / weight
+                    Rxx[i + 1, j] += Fxx / weight
+                    Ryy[i + 1, j] += Fyy / weight
 
                     # xk+1 : x[i, j]
-                    V = Jk
-                    Ux = (1 / Dk) * (G22 * (2 * x[i, j] - 2 * x[i + 1, j]) - 2 * G12 * (
-                            x[i + 1, j + 1] - x[i + 1, j]))
-                    Uy = (1 / Dk) * (G22 * (2 * y[i, j] - 2 * y[i + 1, j]) - 2 * G12 * (
-                            y[i + 1, j + 1] - y[i + 1, j]))
-                    Uxx = (1 / Dk) * 2 * G22
+                    V = Jk * Dk
+                    Ux = -2 * G12 * (x[i + 1, j + 1] - x[i + 1, j]) + 2 * G22 * (x[i, j] - x[i + 1, j])
+                    Uy = -2 * G12 * (y[i + 1, j + 1] - y[i + 1, j]) + 2 * G22 * (y[i, j] - y[i + 1, j])
+                    Uxx = 2 * G22
                     Uyy = Uxx
-                    Vx = (y[i + 1, j + 1] - y[i + 1, j])
-                    Vy = -(x[i + 1, j + 1] - x[i + 1, j])
+                    Uxy = 0
+                    Vxy = 0
+                    Vx = (y[i + 1, j + 1] - y[i + 1, j]) * Dk
+                    Vy = (-x[i + 1, j + 1] + x[i + 1, j]) * Dk
                     Vxx = Vyy = 0
                     Fx = (Ux - Fk * Vx) / V
-                    Rx[i, j] += Fx/12
                     Fy = (Uy - Fk * Vy) / V
                     Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
                     Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
-                    Fxy = (-2 * Fx * Vy) / V
-                    Rxy[i, j] += Fxy/12
-                    Ry[i, j] += Fy/12
-                    Rxx[i, j] += Fxx/12
-                    Ryy[i, j] += Fyy/12
+                    Fxy = (Uxy - Fx * Vy - Fy * Vx - Fk * Vxy) / V
+                    Rx[i, j] += Fx / weight
+                    Rxy[i, j] += Fxy / weight
+                    Ry[i, j] += Fy / weight
+                    Rxx[i, j] += Fxx / weight
+                    Ryy[i, j] += Fyy / weight
 
-                    # xk-1 : x[i+1, j+1]
-                    V = Jk
-                    Ux = (1 / Dk) * (G22 * (2 * x[i + 1, j + 1] - 2 * x[i + 1, j]) - 2 * G12 * (
-                            x[i, j] - x[i + 1, j]))
-                    Uy = (1 / Dk) * (G22 * (2 * y[i + 1, j + 1] - 2 * y[i + 1, j]) - 2 * G12 * (
-                            y[i, j] - y[i + 1, j]))
-                    Uxx = (1 / Dk) * 2 * G11
+                    # xk-1 : x[i + 1, j + 1]
+                    V = Jk * Dk
+                    Ux = 2 * G11 * (x[i + 1, j + 1] - x[i + 1, j]) - 2 * G12 * (x[i, j] - x[i + 1, j])
+                    Uy = 2 * G11 * (y[i + 1, j + 1] - y[i + 1, j]) - 2 * G12 * (y[i, j] - y[i + 1, j])
+                    Uxx = 2 * G11
                     Uyy = Uxx
-                    Vx = (y[i + 1, j + 1] - y[i + 1, j])
-                    Vy = -(x[i, j] - x[i + 1, j])
+                    Uxy = 0
+                    Vxy = 0
+                    Vx = (-y[i, j] + y[i + 1, j]) * Dk
+                    Vy = (x[i, j] - x[i + 1, j]) * Dk
                     Vxx = Vyy = 0
                     Fx = (Ux - Fk * Vx) / V
-                    Rx[i + 1, j + 1] += Fx/12
                     Fy = (Uy - Fk * Vy) / V
                     Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
                     Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
-                    Fxy = (-2 * Fx * Vy) / V
-                    Rxy[i + 1, j + 1] += Fxy/12
-                    Ry[i + 1, j + 1] += Fy/12
-                    Rxx[i + 1, j + 1] += Fxx/12
-                    Ryy[i + 1, j + 1] += Fyy/12
+                    Fxy = (Uxy - Fx * Vy - Fy * Vx - Fk * Vxy) / V
+                    Rx[i + 1, j + 1] += Fx / weight
+                    Rxy[i + 1, j + 1] += Fxy / weight
+                    Ry[i + 1, j + 1] += Fy / weight
+                    Rxx[i + 1, j + 1] += Fxx / weight
+                    Ryy[i + 1, j + 1] += Fyy / weight
 
     if flag != 1:
         print("aproxim: ", aproximation/((nx-1)*(ny-1)*8))
     return aproximation/((nx-1)*(ny-1)*8), Rx, Ry, Rxx, Ryy, Rxy, flag
-
-
-def grad_spusk(omega, canon, grid_shape, tau, eps, count=0):
-    nx, ny = grid_shape
-    Fk, Rx, Ry, Rxx, Ryy, Rxy, flag = functional2(omega, canon, grid_shape)
-    x_old = omega[0]
-    y_old = omega[1]
-    x_new = x_old.copy()
-    y_new = y_old.copy()
-    maxdif = 0.0
-    for i in range(1, nx - 1):
-        for j in range(1, ny - 1):
-            x_new[i, j] = x_old[i, j] - tau * (Rx[i, j] + Ry[i, j])
-            y_new[i, j] = y_old[i, j] - tau * (Rx[i, j] + Ry[i, j])
-            if abs(x_new[i, j] - x_old[i, j]) > maxdif:
-                maxdif = abs(x_new[i, j] - x_old[i, j])
-            if abs(y_new[i, j] - y_old[i, j]) > maxdif:
-                maxdif = abs(y_new[i, j] - y_old[i, j])
-    new_grid = np.array([x_new, y_new])
-    flag = functional2(new_grid, canon, (nx, ny))[6]
-    if flag == 1:
-        tau_new = tau / 2
-        count += 1
-        return grad_spusk(np.array([x_old, y_old]), canon, grid_shape, tau_new, eps, count)
-    else:
-        if maxdif <= eps:
-            return np.array([x_old, y_old])
-        else:
-            count += 1
-            return grad_spusk(np.array([x_new, y_new]), canon, grid_shape, tau, eps, count)
 
 
 def mimimize(omega, canon, grid_shape, tau, eps, count=0):
@@ -1031,27 +1165,33 @@ def mimimize(omega, canon, grid_shape, tau, eps, count=0):
     Fk, Rx, Ry, Rxx, Ryy, Rxy, flag = functional2(omega, canon, grid_shape)
     x_old = omega[0]
     y_old = omega[1]
-    if count >= 500:
+    maxdif = 0.0
+    if count >= 550:
+        print("count limit")
+        print("value = ", Fk)
         return np.array([x_old, y_old])
     x_new = x_old.copy()
     y_new = y_old.copy()
-    maxdif = 0.0
     for i in range(1, nx-1):
         for j in range(1, ny-1):
-            x_new[i, j] = x_old[i, j] - tau * (Rx[i, j] * Ryy[i, j] - Ry[i, j] * Ryy[i, j])/((Rxx[i, j] * Ryy[i, j] - Rxy[i, j] * Rxy[i, j]))
-            y_new[i, j] = y_old[i, j] - tau * (Rx[i, j] * Ryy[i, j] - Ry[i, j] * Ryy[i, j])/((Rxx[i, j] * Ryy[i, j] - Rxy[i, j] * Rxy[i, j]))
+            x_new[i, j] = x_old[i, j] - tau * (Rx[i, j] * Ryy[i, j] - Ry[i, j] * Rxy[i, j]) / (Rxx[i, j] * Ryy[i, j] - Rxy[i, j] ** 2)
+            y_new[i, j] = y_old[i, j] - tau * (Ry[i, j] * Rxx[i, j] - Rx[i, j] * Rxy[i, j]) / (Rxx[i, j] * Ryy[i, j] - Rxy[i, j] ** 2)
             if abs(x_new[i, j] - x_old[i, j]) > maxdif:
                 maxdif = abs(x_new[i, j] - x_old[i, j])
             if abs(y_new[i, j] - y_old[i, j]) > maxdif:
                 maxdif = abs(y_new[i, j] - y_old[i, j])
     new_grid = np.array([x_new, y_new])
-    flag = functional2(new_grid, canon, (nx, ny))[6]
+    temp_func = functional2(new_grid, canon, (nx, ny))
+    flag = temp_func[6]
+    value = temp_func[0]
     if flag == 1:
         tau_new = tau/2
         count += 1
         return mimimize(np.array([x_old, y_old]), canon, grid_shape, tau_new, eps, count)
     else:
+        """or value < 2.5188080454670696"""
         if maxdif <= eps:
+            print("value = ", value)
             return np.array([x_old, y_old])
         else:
             count += 1
@@ -1082,8 +1222,9 @@ def hooke_jeeves(omega, canon, shape, step_size, tolerance):
                         omega_test = omega.copy()
                         omega_test[0][m, n] = new_x_pos
                         omega_test[1][m, n] = new_y_pos
-                        new_value_pos = functional2(omega_test, canon, shape)[0]
-                        smooth_flag = functional2(omega_test, canon, shape)[6]
+                        temp_func = functional2(omega_test, canon, shape)
+                        new_value_pos = temp_func[0]
+                        smooth_flag = temp_func[6]
 
                         if (new_value_pos < best_value) and (smooth_flag != 1):
                             best_value = new_value_pos
@@ -1092,7 +1233,7 @@ def hooke_jeeves(omega, canon, shape, step_size, tolerance):
                             flag = True
 
                     if not flag:
-                        current_step *= current_step - (current_step // 3)
+                        current_step *= current_step - (current_step // 5)
                     else:
                         current_x = best_x
                         current_y = best_y
@@ -1162,14 +1303,13 @@ plt.show()
 
 node2 = [11, 11, 0.6, 0.5]
 
-nx, ny = 10, 10
+nx, ny = 15, 15
 # canon_grid = implicit_transfinite_interpol(nx, sq_t1, sq_b1, sq_l1, sq_r1)
 # canon_grid, count = winslow_without_implicit(NX, Xyt, Xyb, Xyr, Xyl, treshhold)
 # canon_grid = transfinite_interpol(nx, Xyt, Xyb, Xyl, Xyr)
 # canon_grid = implicit_transfinite_interpol(nx, chevt, chevb, chevr, chevl)
 # canon_grid = implicit_transfinite_interpol(nx, myt, myb, myr, myl)
 canon_grid = implicit_transfinite_interpol(nx, sq_t1, sq_b1, sq_l1, sq_r1)
-canon_for_min = canon_grid
 
 for i in range(nx):
     for j in range(ny):
@@ -1190,14 +1330,15 @@ for i in range(nx):
             canon_grid[0][i][j] -= 0.06
         if j == ny - 5:     # and i != 0 and j != 0 and i != nx-1 and j != nx-1
             canon_grid[1][i][j] -= 0.06"""
-"""for i in range(nx-1, -1, -1):
+"""for i in range(nx):
+    for j in range(nx-1, nx//2, -1):
+        if j != 0 and j != ny-1 and j != 0 and j != ny-1:
+            canon_grid[1][i][j] = canon_grid[1][i][j]**1.5"""
+for i in range(nx-1, nx//2, -1):
     for j in range(ny):
-        if j != 0 and j != ny-1:
-            canon_grid[1][i][j] = canon_grid[1][i][j]**1.5 
-for i in range(nx-1, -1, -1):
-    for j in range(ny):
-        if i != 0 and i != ny-1:
-            canon_grid[0][i][j] = canon_grid[0][i][j]**1.5"""
+        if i != 0 and i != ny-1 and j != 0 and j != ny-1:
+            canon_grid[0][i][j] = canon_grid[0][i][j]**1.4
+
 
 canon_grid[0] = np.flip(canon_grid[0], axis=0)
 canon_grid[1] = np.flip(canon_grid[1], axis=0)
@@ -1230,13 +1371,14 @@ print("y ", yy[0, 0], yy[nx-1, ny-1])"""
 # omega_grid2, count = winslow_without_implicit(nx, Xyt, Xyb, Xyr, Xyl, treshhold)
 # omega_grid2 = implicit_transfinite_interpol(nx, myt, myb, myr, myl)
 # omega_grid2 = transfinite_interpol(nx, Xyt, Xyb, Xyl, Xyr)
+omega_grid2 = implicit_transfinite_new(nx)
 # omega_grid2 = implicit_transfinite_interpol(nx, chevt, chevb, chevr, chevl)
 # omega_grid2 = transfinite_interpol(20, horst, horsb, horsr, horsl)
-omega_grid2 = winslow_without_implicit(nx, Xyt, Xyb, Xyr, Xyl, treshhold)[0]
+# omega_grid2 = winslow_without_implicit(nx, Xyt, Xyb, Xyr, Xyl, treshhold)[0]
 # omega_grid2 = implicit_transfinite_interpol(nx, sq_t1, sq_b1, sq_l1, sq_r1)
 # print("\n")
 # print(omega_grid2)
-omega_grid2[0] = np.flip(omega_grid2[0], axis=0)
+omega_grid2[0] = np.flip(omega_grid2[0], axis=0) # Если имплисит, то это в комменте должно быть
 omega_grid2[1] = np.flip(omega_grid2[1], axis=0)
 """omega_grid2[0] = np.transpose(omega_grid2[0])
 omega_grid2[1] = np.transpose(omega_grid2[1])"""
@@ -1263,8 +1405,8 @@ print("flag = ", flag)"""
 
 ### МЕЙН ВЫЗОВ ###
 """new_grid = mimimize(omega_grid, canon_grid, (nx, ny), 1, 10**(-8))"""
-"""new_grid, value = hooke_jeeves(omega_grid2, canon_grid, (nx, ny), 0.2, 0.001)"""
-new_grid = mimimize(omega_grid2, canon_grid, (nx, ny), 1, 1e10)
+"""new_grid, value = hooke_jeeves(omega_grid2, canon_grid, (nx, ny), 0.1, 0.0001)"""
+new_grid = mimimize(omega_grid2, canon_grid, (nx, ny), 0.04, 1e-5)
 plt.plot(new_grid[0], new_grid[1], c="b", linewidth=1)
 plt.plot(np.transpose(new_grid[0]), np.transpose(new_grid[1]), c="b", linewidth=1)
 plt.show()
