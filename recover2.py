@@ -4,6 +4,9 @@ import matplotlib.pyplot as plt
 import math
 from scipy.optimize import minimize
 import sys
+import threading
+import time
+from sklearn.decomposition import PCA
 sys.setrecursionlimit(10000)
 
 
@@ -59,6 +62,26 @@ def Xyt(s):
     x = s
     y = 1 - 3 * s + 3 * s**2
     return np.array([x, y])
+
+
+def sq_t2(s):
+    y = 4
+    return y
+
+
+def sq_b2(s):
+    y = 0
+    return y
+
+
+def sq_l2(s):
+    y = 1000000*s
+    return y
+
+
+def sq_r2(s):
+    y = 1000000 - 1000000*s
+    return y
 
 
 def sq_t1(s):
@@ -581,6 +604,31 @@ def winslow(discr, x_old, y_old, treshhold, maxcount):
     return np.array([x_new, y_new]), count
 
 
+def pca_bounding_box(points):
+    # Центрирование
+    mean = points.mean(axis=0)
+    centered = points - mean
+
+    # PCA
+    pca = PCA(n_components=2)
+    transformed = pca.fit_transform(centered)
+
+    # Прямоугольник в PCA-пространстве
+    min_vals = np.min(transformed, axis=0)
+    max_vals = np.max(transformed, axis=0)
+
+    rect_pca = np.array([
+        [min_vals[0], min_vals[1]],
+        [max_vals[0], min_vals[1]],
+        [max_vals[0], max_vals[1]],
+        [min_vals[0], max_vals[1]],
+    ])
+
+    # Обратное преобразование
+    rect_global = pca.inverse_transform(rect_pca) + mean
+    return rect_global
+
+
 def functional2(grid_omega, grid_canon, grid_shape):
     nx, ny = grid_shape
     aproximation = 0
@@ -605,10 +653,11 @@ def functional2(grid_omega, grid_canon, grid_shape):
     Rxx = np.zeros((nx, ny))
     Ryy = np.zeros((nx, ny))
     Rxy = np.zeros((nx, ny))
-    weight = 12
+    weight = 1
 
     for i in range(nx - 1):
         for j in range(ny - 1):
+            # вот здесь X Y определять
             for k in range(0, 4):
                 if k == 0:  # lb corner perf; k = i,j; k+1 = i,j+1; k-1 = i+1,j
                     G11 = ((X[i, j + 1] - X[i, j]) ** 2) + ((Y[i, j + 1] - Y[i, j]) ** 2)
@@ -635,69 +684,126 @@ def functional2(grid_omega, grid_canon, grid_shape):
                     aproximation += Fk
 
                     # DERIVS:
+                    x1 = x[i, j]
+                    x2 = x[i, j + 1]
+                    x3 = x[i + 1, j]
+                    y1 = y[i, j]
+                    y2 = y[i, j + 1]
+                    y3 = y[i + 1, j]
 
-                    # xk : x[i, j]
-                    V = Jk * Dk
-                    Ux = -2 * G11 * (x[i + 1, j] - x[i, j]) + 2 * G12 * (x[i, j + 1] - x[i, j]) - 2 * G22 *\
-                         (x[i, j + 1] - x[i, j])
-                    Uy = -2 * G11 * (y[i + 1, j] - y[i, j]) + 2 * G12 * (y[i, j + 1] - y[i, j]) - 2 * G22 * \
-                         (y[i, j + 1] - y[i, j])
-                    Uxx = (2 * G22 - 4 * G12 + 2 * G11)
-                    Uyy = Uxx
-                    Uxy = 0
-                    Vxy = 0
-                    Vx = (y[i + 1, j] - y[i, j + 1]) * Dk
-                    Vy = (x[i + 1, j] - x[i, j + 1]) * Dk
-                    Vxx = Vyy = 0
-                    Fx = (Ux - Fk * Vx) / V
-                    Fy = (Uy - Fk * Vy) / V
-                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
-                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
-                    Fxy = (Uxy - Fx * Vy - Fy * Vx - Fk * Vxy) / V
+                    # xk : x[i, j]  done
+                    Fx = (-(G22 * ((x1 - x2)**2 + (y1 - y2)**2) -
+                            2 * G12 * ((x1 - x2) * (x1 - x3) + (y1 - y2) * (y1 - y3)) +
+                                G11 * ((x1 - x3)**2 + (y1 - y3)**2)) * (y2 - y3) +
+                            2 * (G22 * (x1 - x2) + G11 * (x1 - x3) +
+                                    G12 * (-2 * x1 + x2 + x3)) *
+                            (x3 * (y1 - y2) + x1 * (y2 - y3) + x2 * (-y1 + y3))) / \
+                                (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**2)
+                    Fy = -(
+                        ((-x2 + x3) * (G22 * ((x1 - x2)**2 + (y1 - y2)**2) -
+                                       2 * G12 * ((x1 - x2) * (x1 - x3) + (y1 - y2) * (y1 - y3)) +
+                                       G11 * ((x1 - x3)**2 + (y1 - y3)**2)) +
+                         2 * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) *
+                           (G22 * (y1 - y2) + G11 * (y1 - y3) + G12 * (-2 * y1 + y2 + y3)))
+                        / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**2)
+                    )
+                    Fxx = -(
+                        2 * ((x2 - x3)**2 + (y2 - y3)**2) *
+                        (G11 * (y1 - y3)**2 + (y1 - y2) * (G22 * (y1 - y2) + 2 * G12 * (-y1 + y3)))
+                        / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**3)
+                    )
+                    Fyy = -(
+                        2 * (G11 * (x1 - x3)**2 + (x1 - x2) * (G22 * (x1 - x2) + 2 * G12 * (-x1 + x3))) *
+                        ((x2 - x3)**2 + (y2 - y3)**2) /
+                        (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**3)
+                    )
+                    Fxy = (
+                        2 * ((x2 - x3)**2 + (y2 - y3)**2) *
+                        (G22 * (x1 - x2) * (y1 - y2) +
+                         G11 * (x1 - x3) * (y1 - y3) +
+                         G12 * (x2 * y1 + x3 * y1 - x3 * y2 - x2 * y3 + x1 * (-2 * y1 + y2 + y3)))
+                        / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**3)
+                    )
                     Rx[i, j] += Fx / weight
                     Rxy[i, j] += Fxy / weight
                     Ry[i, j] += Fy / weight
                     Rxx[i, j] += Fxx / weight
                     Ryy[i, j] += Fyy / weight
 
-                    # xk+1 : x[i, j + 1]
-                    V = Jk * Dk
-                    Ux = -2 * G12 * (x[i + 1, j] - x[i, j]) + 2 * G22 * (x[i, j + 1] - x[i, j])
-                    Uy = -2 * G12 * (y[i + 1, j] - y[i, j]) + 2 * G22 * (y[i, j + 1] - y[i, j])
-                    Uxx = 2 * G22
-                    Uyy = Uxx
-                    Uxy = 0
-                    Vxy = 0
-                    Vx = (y[i + 1, j] - y[i, j]) * Dk
-                    Vy = (-x[i + 1, j] + x[i, j]) * Dk
-                    Vxx = Vyy = 0
-                    Fx = (Ux - Fk * Vx) / V
-                    Fy = (Uy - Fk * Vy) / V
-                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
-                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
-                    Fxy = (Uxy - Fx * Vy - Fy * Vx - Fk * Vxy) / V
+                    # xk+1 : x[i, j + 1] done
+                    Fx = (
+                        (-2 * G12 * (y1 - y2) * ((x1 - x3)**2 + (y1 - y3)**2) +
+                         G11 * ((x1 - x3)**2 + (y1 - y3)**2) * (y1 - y3) +
+                         G22 * (2 * x2 * x3 * (y1 - y2) +
+                                2 * x1 * (x3 * (-y1 + y2) + x2 * (y2 - y3)) +
+                                (y1 - y2)**2 * (y1 - y3) +
+                                x2**2 * (-y1 + y3) +
+                                x1**2 * (y1 - 2 * y2 + y3))
+                        ) / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**2)
+                    )
+                    Fy = result = -(
+                        (G22 * (x1**3 - x2**2 * x3 - x1**2 * (2 * x2 + x3) + x3 * (y1 - y2)**2 +
+                                x1 * (x2**2 + 2 * x2 * x3 + (y1 - y2) * (y1 + y2 - 2 * y3)) -
+                                2 * x2 * (y1 - y2) * (y1 - y3)) -
+                         2 * G12 * (x1 - x2) * ((x1 - x3)**2 + (y1 - y3)**2) +
+                         G11 * (x1 - x3) * ((x1 - x3)**2 + (y1 - y3)**2))
+                        / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**2)
+                    )
+                    Fxx = -(
+                        2 * ((x1 - x3)**2 + (y1 - y3)**2) *
+                        (G11 * (y1 - y3)**2 + (y1 - y2) * (G22 * (y1 - y2) + 2 * G12 * (-y1 + y3)))
+                        / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**3)
+                    )
+                    Fyy = -(
+                        2 * (G11 * (x1 - x3)**2 + (x1 - x2) * (G22 * (x1 - x2) + 2 * G12 * (-x1 + x3))) *
+                        ((x1 - x3)**2 + (y1 - y3)**2) /
+                        (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**3)
+                    )
+                    Fxy = (
+                        2 * ((x1 - x3)**2 + (y1 - y3)**2) *
+                        (G22 * (x1 - x2) * (y1 - y2) +
+                         G11 * (x1 - x3) * (y1 - y3) +
+                         G12 * (x2 * y1 + x3 * y1 - x3 * y2 - x2 * y3 + x1 * (-2 * y1 + y2 + y3)))
+                        / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**3)
+                    )
                     Rx[i, j + 1] += Fx / weight
                     Rxy[i, j + 1] += Fxy / weight
                     Ry[i, j + 1] += Fy / weight
                     Rxx[i, j + 1] += Fxx / weight
                     Ryy[i, j + 1] += Fyy / weight
 
-                    # xk-1 : x[i + 1, j]
-                    V = Jk * Dk
-                    Ux = 2 * G11 * (x[i + 1, j] - x[i, j]) - 2 * G12 * (x[i, j + 1] - x[i, j])
-                    Uy = 2 * G11 * (y[i + 1, j] - y[i, j]) - 2 * G12 * (y[i, j + 1] - y[i, j])
-                    Uxx = 2 * G11
-                    Uyy = Uxx
-                    Uxy = 0
-                    Vxy = 0
-                    Vx = (-y[i, j + 1] + y[i, j]) * Dk
-                    Vy = (x[i, j + 1] - x[i, j]) * Dk
-                    Vxx = Vyy = 0
-                    Fx = (Ux - Fk * Vx) / V
-                    Fy = (Uy - Fk * Vy) / V
-                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
-                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
-                    Fxy = (Uxy - Fx * Vy - Fy * Vx - Fk * Vxy) / V
+                    # xk-1 : x[i + 1, j] done
+                    Fx = (
+                        ((x1 - x2)**2 + (y1 - y2)**2) * (G22 * (-y1 + y2) + 2 * G12 * (y1 - y3)) -
+                        G11 * (-2 * x1 * (x2 * y1 + x3 * y2) +
+                               (y1 - y2) * (-x3**2 + (y1 - y3)**2) +
+                               x1**2 * (y1 + y2 - 2 * y3) +
+                               2 * x2 * x3 * (y1 - y3) +
+                               2 * x1 * (x2 + x3) * y3)
+                    ) / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**2)
+                    Fy = (
+                        (G22 * (x1 - x2) + 2 * G12 * (-x1 + x3)) * ((x1 - x2)**2 + (y1 - y2)**2) +
+                        G11 * (x1**3 - x1**2 * (x2 + 2 * x3) + x2 * (-x3**2 + (y1 - y3)**2) -
+                               2 * x3 * (y1 - y2) * (y1 - y3) +
+                               x1 * (2 * x2 * x3 + x3**2 + (y1 - y3) * (y1 - 2 * y2 + y3)))
+                    ) / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**2)
+                    Fxx = -(
+                        2 * ((x1 - x2)**2 + (y1 - y2)**2) *
+                        (G11 * (y1 - y3)**2 + (y1 - y2) * (G22 * (y1 - y2) + 2 * G12 * (-y1 + y3)))
+                        / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**3)
+                    )
+                    Fyy = -(
+                        2 * (G11 * (x1 - x3)**2 + (x1 - x2) * (G22 * (x1 - x2) + 2 * G12 * (-x1 + x3))) *
+                        ((x1 - x2)**2 + (y1 - y2)**2) /
+                        (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**3)
+                    )
+                    Fxy = (
+                        2 * ((x1 - x2)**2 + (y1 - y2)**2) *
+                        (G22 * (x1 - x2) * (y1 - y2) +
+                         G11 * (x1 - x3) * (y1 - y3) +
+                         G12 * (x2 * y1 + x3 * y1 - x3 * y2 - x2 * y3 + x1 * (-2 * y1 + y2 + y3)))
+                        / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**3)
+                    )
                     Rx[i + 1, j] += Fx / weight
                     Rxy[i + 1, j] += Fxy / weight
                     Ry[i + 1, j] += Fy / weight
@@ -734,24 +840,46 @@ def functional2(grid_omega, grid_canon, grid_shape):
 
                     # DERIVS:
 
+                    x1 = x[i + 1, j + 1]
+                    x2 = x[i + 1, j]
+                    x3 = x[i, j + 1]
+                    y1 = y[i + 1, j + 1]
+                    y2 = y[i + 1, j]
+                    y3 = y[i, j + 1]
+
                     # xk : x[i + 1, j + 1]
-                    V = Jk * Dk
-                    Ux = -2 * G11 * (x[i, j + 1] - x[i + 1, j + 1]) + 2 * G12 * (x[i + 1, j] - x[i + 1, j + 1]) - 2 * G22 * \
-                         (x[i + 1, j] - x[i + 1, j + 1])
-                    Uy = -2 * G11 * (y[i, j + 1] - y[i + 1, j + 1]) + 2 * G12 * (y[i + 1, j] - y[i + 1, j + 1]) - 2 * G22 * \
-                         (y[i + 1, j] - y[i + 1, j + 1])
-                    Uxx = (2 * G22 - 4 * G12 + 2 * G11)
-                    Uyy = Uxx
-                    Uxy = 0
-                    Vxy = 0
-                    Vx = (y[i, j + 1] - y[i + 1, j]) * Dk
-                    Vy = (x[i, j + 1] - x[i + 1, j]) * Dk
-                    Vxx = Vyy = 0
-                    Fx = (Ux - Fk * Vx) / V
-                    Fy = (Uy - Fk * Vy) / V
-                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
-                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
-                    Fxy = (Uxy - Fx * Vy - Fy * Vx - Fk * Vxy) / V
+                    Fx = (-(G22 * ((x1 - x2) ** 2 + (y1 - y2) ** 2) -
+                            2 * G12 * ((x1 - x2) * (x1 - x3) + (y1 - y2) * (y1 - y3)) +
+                            G11 * ((x1 - x3) ** 2 + (y1 - y3) ** 2)) * (y2 - y3) +
+                          2 * (G22 * (x1 - x2) + G11 * (x1 - x3) +
+                               G12 * (-2 * x1 + x2 + x3)) *
+                          (x3 * (y1 - y2) + x1 * (y2 - y3) + x2 * (-y1 + y3))) / \
+                         (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 2)
+                    Fy = -(
+                            ((-x2 + x3) * (G22 * ((x1 - x2) ** 2 + (y1 - y2) ** 2) -
+                                           2 * G12 * ((x1 - x2) * (x1 - x3) + (y1 - y2) * (y1 - y3)) +
+                                           G11 * ((x1 - x3) ** 2 + (y1 - y3) ** 2)) +
+                             2 * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) *
+                             (G22 * (y1 - y2) + G11 * (y1 - y3) + G12 * (-2 * y1 + y2 + y3)))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 2)
+                    )
+                    Fxx = -(
+                            2 * ((x2 - x3) ** 2 + (y2 - y3) ** 2) *
+                            (G11 * (y1 - y3) ** 2 + (y1 - y2) * (G22 * (y1 - y2) + 2 * G12 * (-y1 + y3)))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
+                    )
+                    Fyy = -(
+                            2 * (G11 * (x1 - x3) ** 2 + (x1 - x2) * (G22 * (x1 - x2) + 2 * G12 * (-x1 + x3))) *
+                            ((x2 - x3) ** 2 + (y2 - y3) ** 2) /
+                            (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
+                    )
+                    Fxy = (
+                            2 * ((x2 - x3) ** 2 + (y2 - y3) ** 2) *
+                            (G22 * (x1 - x2) * (y1 - y2) +
+                             G11 * (x1 - x3) * (y1 - y3) +
+                             G12 * (x2 * y1 + x3 * y1 - x3 * y2 - x2 * y3 + x1 * (-2 * y1 + y2 + y3)))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
+                    )
                     Rx[i + 1, j + 1] += Fx / weight
                     Rxy[i + 1, j + 1] += Fxy / weight
                     Ry[i + 1, j + 1] += Fy / weight
@@ -759,21 +887,41 @@ def functional2(grid_omega, grid_canon, grid_shape):
                     Ryy[i + 1, j + 1] += Fyy / weight
 
                     # xk+1 : x[i + 1, j]
-                    V = Jk * Dk
-                    Ux = -2 * G12 * (x[i, j + 1] - x[i + 1, j + 1]) + 2 * G22 * (x[i + 1, j] - x[i + 1, j + 1])
-                    Uy = -2 * G12 * (y[i, j + 1] - y[i + 1, j + 1]) + 2 * G22 * (y[i + 1, j] - y[i + 1, j + 1])
-                    Uxx = 2 * G22
-                    Uyy = Uxx
-                    Uxy = 0
-                    Vxy = 0
-                    Vx = (y[i, j + 1] - y[i + 1, j + 1]) * Dk
-                    Vy = (-x[i, j + 1] + x[i + 1, j + 1]) * Dk
-                    Vxx = Vyy = 0
-                    Fx = (Ux - Fk * Vx) / V
-                    Fy = (Uy - Fk * Vy) / V
-                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
-                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
-                    Fxy = (Uxy - Fx * Vy - Fy * Vx - Fk * Vxy) / V
+                    Fx = (
+                            (-2 * G12 * (y1 - y2) * ((x1 - x3) ** 2 + (y1 - y3) ** 2) +
+                             G11 * ((x1 - x3) ** 2 + (y1 - y3) ** 2) * (y1 - y3) +
+                             G22 * (2 * x2 * x3 * (y1 - y2) +
+                                    2 * x1 * (x3 * (-y1 + y2) + x2 * (y2 - y3)) +
+                                    (y1 - y2) ** 2 * (y1 - y3) +
+                                    x2 ** 2 * (-y1 + y3) +
+                                    x1 ** 2 * (y1 - 2 * y2 + y3))
+                             ) / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 2)
+                    )
+                    Fy = result = -(
+                            (G22 * (x1 ** 3 - x2 ** 2 * x3 - x1 ** 2 * (2 * x2 + x3) + x3 * (y1 - y2) ** 2 +
+                                    x1 * (x2 ** 2 + 2 * x2 * x3 + (y1 - y2) * (y1 + y2 - 2 * y3)) -
+                                    2 * x2 * (y1 - y2) * (y1 - y3)) -
+                             2 * G12 * (x1 - x2) * ((x1 - x3) ** 2 + (y1 - y3) ** 2) +
+                             G11 * (x1 - x3) * ((x1 - x3) ** 2 + (y1 - y3) ** 2))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 2)
+                    )
+                    Fxx = -(
+                            2 * ((x1 - x3) ** 2 + (y1 - y3) ** 2) *
+                            (G11 * (y1 - y3) ** 2 + (y1 - y2) * (G22 * (y1 - y2) + 2 * G12 * (-y1 + y3)))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
+                    )
+                    Fyy = -(
+                            2 * (G11 * (x1 - x3) ** 2 + (x1 - x2) * (G22 * (x1 - x2) + 2 * G12 * (-x1 + x3))) *
+                            ((x1 - x3) ** 2 + (y1 - y3) ** 2) /
+                            (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
+                    )
+                    Fxy = (
+                            2 * ((x1 - x3) ** 2 + (y1 - y3) ** 2) *
+                            (G22 * (x1 - x2) * (y1 - y2) +
+                             G11 * (x1 - x3) * (y1 - y3) +
+                             G12 * (x2 * y1 + x3 * y1 - x3 * y2 - x2 * y3 + x1 * (-2 * y1 + y2 + y3)))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
+                    )
                     Rx[i + 1, j] += Fx / weight
                     Rxy[i + 1, j] += Fxy / weight
                     Ry[i + 1, j] += Fy / weight
@@ -781,21 +929,37 @@ def functional2(grid_omega, grid_canon, grid_shape):
                     Ryy[i + 1, j] += Fyy / weight
 
                     # xk-1 : x[i, j + 1]
-                    V = Jk * Dk
-                    Ux = 2 * G11 * (x[i, j + 1] - x[i + 1, j + 1]) - 2 * G12 * (x[i + 1, j] - x[i + 1, j + 1])
-                    Uy = 2 * G11 * (y[i, j + 1] - y[i + 1, j + 1]) - 2 * G12 * (y[i + 1, j] - y[i + 1, j + 1])
-                    Uxx = 2 * G11
-                    Uyy = Uxx
-                    Uxy = 0
-                    Vxy = 0
-                    Vx = (-y[i + 1, j] + y[i + 1, j + 1]) * Dk
-                    Vy = (x[i + 1, j] - x[i + 1, j + 1]) * Dk
-                    Vxx = Vyy = 0
-                    Fx = (Ux - Fk * Vx) / V
-                    Fy = (Uy - Fk * Vy) / V
-                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
-                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
-                    Fxy = (Uxy - Fx * Vy - Fy * Vx - Fk * Vxy) / V
+                    Fx = (
+                                 ((x1 - x2) ** 2 + (y1 - y2) ** 2) * (G22 * (-y1 + y2) + 2 * G12 * (y1 - y3)) -
+                                 G11 * (-2 * x1 * (x2 * y1 + x3 * y2) +
+                                        (y1 - y2) * (-x3 ** 2 + (y1 - y3) ** 2) +
+                                        x1 ** 2 * (y1 + y2 - 2 * y3) +
+                                        2 * x2 * x3 * (y1 - y3) +
+                                        2 * x1 * (x2 + x3) * y3)
+                         ) / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 2)
+                    Fy = (
+                                 (G22 * (x1 - x2) + 2 * G12 * (-x1 + x3)) * ((x1 - x2) ** 2 + (y1 - y2) ** 2) +
+                                 G11 * (x1 ** 3 - x1 ** 2 * (x2 + 2 * x3) + x2 * (-x3 ** 2 + (y1 - y3) ** 2) -
+                                        2 * x3 * (y1 - y2) * (y1 - y3) +
+                                        x1 * (2 * x2 * x3 + x3 ** 2 + (y1 - y3) * (y1 - 2 * y2 + y3)))
+                         ) / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 2)
+                    Fxx = -(
+                            2 * ((x1 - x2) ** 2 + (y1 - y2) ** 2) *
+                            (G11 * (y1 - y3) ** 2 + (y1 - y2) * (G22 * (y1 - y2) + 2 * G12 * (-y1 + y3)))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
+                    )
+                    Fyy = -(
+                            2 * (G11 * (x1 - x3) ** 2 + (x1 - x2) * (G22 * (x1 - x2) + 2 * G12 * (-x1 + x3))) *
+                            ((x1 - x2) ** 2 + (y1 - y2) ** 2) /
+                            (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
+                    )
+                    Fxy = (
+                            2 * ((x1 - x2) ** 2 + (y1 - y2) ** 2) *
+                            (G22 * (x1 - x2) * (y1 - y2) +
+                             G11 * (x1 - x3) * (y1 - y3) +
+                             G12 * (x2 * y1 + x3 * y1 - x3 * y2 - x2 * y3 + x1 * (-2 * y1 + y2 + y3)))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
+                    )
                     Rx[i, j + 1] += Fx / weight
                     Rxy[i, j + 1] += Fxy / weight
                     Ry[i, j + 1] += Fy / weight
@@ -830,24 +994,46 @@ def functional2(grid_omega, grid_canon, grid_shape):
 
                     # DERIVS:
 
+                    x1 = x[i, j + 1]
+                    x2 = x[i + 1, j + 1]
+                    x3 = x[i, j]
+                    y1 = y[i, j + 1]
+                    y2 = y[i + 1, j + 1]
+                    y3 = y[i, j]
+
                     # xk : x[i , j + 1]
-                    V = Jk * Dk
-                    Ux = -2 * G11 * (x[i, j] - x[i, j + 1]) + 2 * G12 * (x[i + 1, j + 1] - x[i, j + 1]) - 2 * G22 * \
-                         (x[i + 1, j + 1] - x[i, j + 1])
-                    Uy = -2 * G11 * (y[i, j] - y[i, j + 1]) + 2 * G12 * (y[i + 1, j + 1] - y[i, j + 1]) - 2 * G22 * \
-                         (y[i + 1, j + 1] - y[i, j + 1])
-                    Uxx = (2 * G22 - 4 * G12 + 2 * G11)
-                    Uyy = Uxx
-                    Uxy = 0
-                    Vxy = 0
-                    Vx = (y[i, j] - y[i + 1, j + 1]) * Dk
-                    Vy = (x[i, j] - x[i + 1, j + 1]) * Dk
-                    Vxx = Vyy = 0
-                    Fx = (Ux - Fk * Vx) / V
-                    Fy = (Uy - Fk * Vy) / V
-                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
-                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
-                    Fxy = (Uxy - Fx * Vy - Fy * Vx - Fk * Vxy) / V
+                    Fx = (-(G22 * ((x1 - x2) ** 2 + (y1 - y2) ** 2) -
+                            2 * G12 * ((x1 - x2) * (x1 - x3) + (y1 - y2) * (y1 - y3)) +
+                            G11 * ((x1 - x3) ** 2 + (y1 - y3) ** 2)) * (y2 - y3) +
+                          2 * (G22 * (x1 - x2) + G11 * (x1 - x3) +
+                               G12 * (-2 * x1 + x2 + x3)) *
+                          (x3 * (y1 - y2) + x1 * (y2 - y3) + x2 * (-y1 + y3))) / \
+                         (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 2)
+                    Fy = -(
+                            ((-x2 + x3) * (G22 * ((x1 - x2) ** 2 + (y1 - y2) ** 2) -
+                                           2 * G12 * ((x1 - x2) * (x1 - x3) + (y1 - y2) * (y1 - y3)) +
+                                           G11 * ((x1 - x3) ** 2 + (y1 - y3) ** 2)) +
+                             2 * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) *
+                             (G22 * (y1 - y2) + G11 * (y1 - y3) + G12 * (-2 * y1 + y2 + y3)))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 2)
+                    )
+                    Fxx = -(
+                            2 * ((x2 - x3) ** 2 + (y2 - y3) ** 2) *
+                            (G11 * (y1 - y3) ** 2 + (y1 - y2) * (G22 * (y1 - y2) + 2 * G12 * (-y1 + y3)))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
+                    )
+                    Fyy = -(
+                            2 * (G11 * (x1 - x3) ** 2 + (x1 - x2) * (G22 * (x1 - x2) + 2 * G12 * (-x1 + x3))) *
+                            ((x2 - x3) ** 2 + (y2 - y3) ** 2) /
+                            (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
+                    )
+                    Fxy = (
+                            2 * ((x2 - x3) ** 2 + (y2 - y3) ** 2) *
+                            (G22 * (x1 - x2) * (y1 - y2) +
+                             G11 * (x1 - x3) * (y1 - y3) +
+                             G12 * (x2 * y1 + x3 * y1 - x3 * y2 - x2 * y3 + x1 * (-2 * y1 + y2 + y3)))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
+                    )
                     Rx[i, j + 1] += Fx / weight
                     Rxy[i, j + 1] += Fxy / weight
                     Ry[i, j + 1] += Fy / weight
@@ -855,21 +1041,41 @@ def functional2(grid_omega, grid_canon, grid_shape):
                     Ryy[i, j + 1] += Fyy / weight
 
                     # xk+1 : x[i + 1, j + 1]
-                    V = Jk * Dk
-                    Ux = -2 * G12 * (x[i, j] - x[i, j + 1]) + 2 * G22 * (x[i + 1, j + 1] - x[i, j + 1])
-                    Uy = -2 * G12 * (y[i, j] - y[i, j + 1]) + 2 * G22 * (y[i + 1, j + 1] - y[i, j + 1])
-                    Uxx = 2 * G22
-                    Uyy = Uxx
-                    Uxy = 0
-                    Vxy = 0
-                    Vx = (y[i, j] - y[i, j + 1]) * Dk
-                    Vy = (-x[i, j] + x[i, j + 1]) * Dk
-                    Vxx = Vyy = 0
-                    Fx = (Ux - Fk * Vx) / V
-                    Fy = (Uy - Fk * Vy) / V
-                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
-                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
-                    Fxy = (Uxy - Fx * Vy - Fy * Vx - Fk * Vxy) / V
+                    Fx = (
+                            (-2 * G12 * (y1 - y2) * ((x1 - x3) ** 2 + (y1 - y3) ** 2) +
+                             G11 * ((x1 - x3) ** 2 + (y1 - y3) ** 2) * (y1 - y3) +
+                             G22 * (2 * x2 * x3 * (y1 - y2) +
+                                    2 * x1 * (x3 * (-y1 + y2) + x2 * (y2 - y3)) +
+                                    (y1 - y2) ** 2 * (y1 - y3) +
+                                    x2 ** 2 * (-y1 + y3) +
+                                    x1 ** 2 * (y1 - 2 * y2 + y3))
+                             ) / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 2)
+                    )
+                    Fy = result = -(
+                            (G22 * (x1 ** 3 - x2 ** 2 * x3 - x1 ** 2 * (2 * x2 + x3) + x3 * (y1 - y2) ** 2 +
+                                    x1 * (x2 ** 2 + 2 * x2 * x3 + (y1 - y2) * (y1 + y2 - 2 * y3)) -
+                                    2 * x2 * (y1 - y2) * (y1 - y3)) -
+                             2 * G12 * (x1 - x2) * ((x1 - x3) ** 2 + (y1 - y3) ** 2) +
+                             G11 * (x1 - x3) * ((x1 - x3) ** 2 + (y1 - y3) ** 2))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 2)
+                    )
+                    Fxx = -(
+                            2 * ((x1 - x3) ** 2 + (y1 - y3) ** 2) *
+                            (G11 * (y1 - y3) ** 2 + (y1 - y2) * (G22 * (y1 - y2) + 2 * G12 * (-y1 + y3)))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
+                    )
+                    Fyy = -(
+                            2 * (G11 * (x1 - x3) ** 2 + (x1 - x2) * (G22 * (x1 - x2) + 2 * G12 * (-x1 + x3))) *
+                            ((x1 - x3) ** 2 + (y1 - y3) ** 2) /
+                            (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
+                    )
+                    Fxy = (
+                            2 * ((x1 - x3) ** 2 + (y1 - y3) ** 2) *
+                            (G22 * (x1 - x2) * (y1 - y2) +
+                             G11 * (x1 - x3) * (y1 - y3) +
+                             G12 * (x2 * y1 + x3 * y1 - x3 * y2 - x2 * y3 + x1 * (-2 * y1 + y2 + y3)))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
+                    )
                     Rx[i + 1, j + 1] += Fx / weight
                     Rxy[i + 1, j + 1] += Fxy / weight
                     Ry[i + 1, j + 1] += Fy / weight
@@ -877,21 +1083,37 @@ def functional2(grid_omega, grid_canon, grid_shape):
                     Ryy[i + 1, j + 1] += Fyy / weight
 
                     # xk-1 : x[i, j]
-                    V = Jk * Dk
-                    Ux = 2 * G11 * (x[i, j] - x[i, j + 1]) - 2 * G12 * (x[i + 1, j + 1] - x[i, j + 1])
-                    Uy = 2 * G11 * (y[i, j] - y[i, j + 1]) - 2 * G12 * (y[i + 1, j + 1] - y[i, j + 1])
-                    Uxx = 2 * G11
-                    Uyy = Uxx
-                    Uxy = 0
-                    Vxy = 0
-                    Vx = (-y[i + 1, j + 1] + y[i, j + 1]) * Dk
-                    Vy = (x[i + 1, j + 1] - x[i, j + 1]) * Dk
-                    Vxx = Vyy = 0
-                    Fx = (Ux - Fk * Vx) / V
-                    Fy = (Uy - Fk * Vy) / V
-                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
-                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
-                    Fxy = (Uxy - Fx * Vy - Fy * Vx - Fk * Vxy) / V
+                    Fx = (
+                                 ((x1 - x2) ** 2 + (y1 - y2) ** 2) * (G22 * (-y1 + y2) + 2 * G12 * (y1 - y3)) -
+                                 G11 * (-2 * x1 * (x2 * y1 + x3 * y2) +
+                                        (y1 - y2) * (-x3 ** 2 + (y1 - y3) ** 2) +
+                                        x1 ** 2 * (y1 + y2 - 2 * y3) +
+                                        2 * x2 * x3 * (y1 - y3) +
+                                        2 * x1 * (x2 + x3) * y3)
+                         ) / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 2)
+                    Fy = (
+                                 (G22 * (x1 - x2) + 2 * G12 * (-x1 + x3)) * ((x1 - x2) ** 2 + (y1 - y2) ** 2) +
+                                 G11 * (x1 ** 3 - x1 ** 2 * (x2 + 2 * x3) + x2 * (-x3 ** 2 + (y1 - y3) ** 2) -
+                                        2 * x3 * (y1 - y2) * (y1 - y3) +
+                                        x1 * (2 * x2 * x3 + x3 ** 2 + (y1 - y3) * (y1 - 2 * y2 + y3)))
+                         ) / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 2)
+                    Fxx = -(
+                            2 * ((x1 - x2) ** 2 + (y1 - y2) ** 2) *
+                            (G11 * (y1 - y3) ** 2 + (y1 - y2) * (G22 * (y1 - y2) + 2 * G12 * (-y1 + y3)))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
+                    )
+                    Fyy = -(
+                            2 * (G11 * (x1 - x3) ** 2 + (x1 - x2) * (G22 * (x1 - x2) + 2 * G12 * (-x1 + x3))) *
+                            ((x1 - x2) ** 2 + (y1 - y2) ** 2) /
+                            (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
+                    )
+                    Fxy = (
+                            2 * ((x1 - x2) ** 2 + (y1 - y2) ** 2) *
+                            (G22 * (x1 - x2) * (y1 - y2) +
+                             G11 * (x1 - x3) * (y1 - y3) +
+                             G12 * (x2 * y1 + x3 * y1 - x3 * y2 - x2 * y3 + x1 * (-2 * y1 + y2 + y3)))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
+                    )
                     Rx[i, j] += Fx / weight
                     Rxy[i, j] += Fxy / weight
                     Ry[i, j] += Fy / weight
@@ -926,24 +1148,46 @@ def functional2(grid_omega, grid_canon, grid_shape):
 
                     # DERIVS:
 
+                    x1 = x[i + 1, j]
+                    x2 = x[i, j]
+                    x3 = x[i + 1, j + 1]
+                    y1 = y[i + 1, j]
+                    y2 = y[i, j]
+                    y3 = y[i + 1, j + 1]
+
                     # xk : x[i + 1, j]
-                    V = Jk * Dk
-                    Ux = -2 * G11 * (x[i + 1, j + 1] - x[i + 1, j]) + 2 * G12 * (x[i, j] - x[i + 1, j]) - 2 * G22 * \
-                         (x[i, j] - x[i + 1, j])
-                    Uy = -2 * G11 * (y[i + 1, j + 1] - y[i + 1, j]) + 2 * G12 * (y[i, j] - y[i + 1, j]) - 2 * G22 * \
-                         (y[i, j] - y[i + 1, j])
-                    Uxx = (2 * G22 - 4 * G12 + 2 * G11)
-                    Uyy = Uxx
-                    Uxy = 0
-                    Vxy = 0
-                    Vx = (y[i + 1, j + 1] - y[i, j]) * Dk
-                    Vy = (x[i + 1, j + 1] - x[i, j]) * Dk
-                    Vxx = Vyy = 0
-                    Fx = (Ux - Fk * Vx) / V
-                    Fy = (Uy - Fk * Vy) / V
-                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
-                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
-                    Fxy = (Uxy - Fx * Vy - Fy * Vx - Fk * Vxy) / V
+                    Fx = (-(G22 * ((x1 - x2) ** 2 + (y1 - y2) ** 2) -
+                            2 * G12 * ((x1 - x2) * (x1 - x3) + (y1 - y2) * (y1 - y3)) +
+                            G11 * ((x1 - x3) ** 2 + (y1 - y3) ** 2)) * (y2 - y3) +
+                          2 * (G22 * (x1 - x2) + G11 * (x1 - x3) +
+                               G12 * (-2 * x1 + x2 + x3)) *
+                          (x3 * (y1 - y2) + x1 * (y2 - y3) + x2 * (-y1 + y3))) / \
+                         (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 2)
+                    Fy = -(
+                            ((-x2 + x3) * (G22 * ((x1 - x2) ** 2 + (y1 - y2) ** 2) -
+                                           2 * G12 * ((x1 - x2) * (x1 - x3) + (y1 - y2) * (y1 - y3)) +
+                                           G11 * ((x1 - x3) ** 2 + (y1 - y3) ** 2)) +
+                             2 * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) *
+                             (G22 * (y1 - y2) + G11 * (y1 - y3) + G12 * (-2 * y1 + y2 + y3)))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 2)
+                    )
+                    Fxx = -(
+                            2 * ((x2 - x3) ** 2 + (y2 - y3) ** 2) *
+                            (G11 * (y1 - y3) ** 2 + (y1 - y2) * (G22 * (y1 - y2) + 2 * G12 * (-y1 + y3)))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
+                    )
+                    Fyy = -(
+                            2 * (G11 * (x1 - x3) ** 2 + (x1 - x2) * (G22 * (x1 - x2) + 2 * G12 * (-x1 + x3))) *
+                            ((x2 - x3) ** 2 + (y2 - y3) ** 2) /
+                            (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
+                    )
+                    Fxy = (
+                            2 * ((x2 - x3) ** 2 + (y2 - y3) ** 2) *
+                            (G22 * (x1 - x2) * (y1 - y2) +
+                             G11 * (x1 - x3) * (y1 - y3) +
+                             G12 * (x2 * y1 + x3 * y1 - x3 * y2 - x2 * y3 + x1 * (-2 * y1 + y2 + y3)))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
+                    )
                     Rx[i + 1, j] += Fx / weight
                     Rxy[i + 1, j] += Fxy / weight
                     Ry[i + 1, j] += Fy / weight
@@ -951,21 +1195,41 @@ def functional2(grid_omega, grid_canon, grid_shape):
                     Ryy[i + 1, j] += Fyy / weight
 
                     # xk+1 : x[i, j]
-                    V = Jk * Dk
-                    Ux = -2 * G12 * (x[i + 1, j + 1] - x[i + 1, j]) + 2 * G22 * (x[i, j] - x[i + 1, j])
-                    Uy = -2 * G12 * (y[i + 1, j + 1] - y[i + 1, j]) + 2 * G22 * (y[i, j] - y[i + 1, j])
-                    Uxx = 2 * G22
-                    Uyy = Uxx
-                    Uxy = 0
-                    Vxy = 0
-                    Vx = (y[i + 1, j + 1] - y[i + 1, j]) * Dk
-                    Vy = (-x[i + 1, j + 1] + x[i + 1, j]) * Dk
-                    Vxx = Vyy = 0
-                    Fx = (Ux - Fk * Vx) / V
-                    Fy = (Uy - Fk * Vy) / V
-                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
-                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
-                    Fxy = (Uxy - Fx * Vy - Fy * Vx - Fk * Vxy) / V
+                    Fx = (
+                            (-2 * G12 * (y1 - y2) * ((x1 - x3) ** 2 + (y1 - y3) ** 2) +
+                             G11 * ((x1 - x3) ** 2 + (y1 - y3) ** 2) * (y1 - y3) +
+                             G22 * (2 * x2 * x3 * (y1 - y2) +
+                                    2 * x1 * (x3 * (-y1 + y2) + x2 * (y2 - y3)) +
+                                    (y1 - y2) ** 2 * (y1 - y3) +
+                                    x2 ** 2 * (-y1 + y3) +
+                                    x1 ** 2 * (y1 - 2 * y2 + y3))
+                             ) / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 2)
+                    )
+                    Fy = -(
+                            (G22 * (x1 ** 3 - x2 ** 2 * x3 - x1 ** 2 * (2 * x2 + x3) + x3 * (y1 - y2) ** 2 +
+                                    x1 * (x2 ** 2 + 2 * x2 * x3 + (y1 - y2) * (y1 + y2 - 2 * y3)) -
+                                    2 * x2 * (y1 - y2) * (y1 - y3)) -
+                             2 * G12 * (x1 - x2) * ((x1 - x3) ** 2 + (y1 - y3) ** 2) +
+                             G11 * (x1 - x3) * ((x1 - x3) ** 2 + (y1 - y3) ** 2))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 2)
+                    )
+                    Fxx = -(
+                            2 * ((x1 - x3) ** 2 + (y1 - y3) ** 2) *
+                            (G11 * (y1 - y3) ** 2 + (y1 - y2) * (G22 * (y1 - y2) + 2 * G12 * (-y1 + y3)))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
+                    )
+                    Fyy = -(
+                            2 * (G11 * (x1 - x3) ** 2 + (x1 - x2) * (G22 * (x1 - x2) + 2 * G12 * (-x1 + x3))) *
+                            ((x1 - x3) ** 2 + (y1 - y3) ** 2) /
+                            (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
+                    )
+                    Fxy = (
+                            2 * ((x1 - x3) ** 2 + (y1 - y3) ** 2) *
+                            (G22 * (x1 - x2) * (y1 - y2) +
+                             G11 * (x1 - x3) * (y1 - y3) +
+                             G12 * (x2 * y1 + x3 * y1 - x3 * y2 - x2 * y3 + x1 * (-2 * y1 + y2 + y3)))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
+                    )
                     Rx[i, j] += Fx / weight
                     Rxy[i, j] += Fxy / weight
                     Ry[i, j] += Fy / weight
@@ -973,71 +1237,100 @@ def functional2(grid_omega, grid_canon, grid_shape):
                     Ryy[i, j] += Fyy / weight
 
                     # xk-1 : x[i + 1, j + 1]
-                    V = Jk * Dk
-                    Ux = 2 * G11 * (x[i + 1, j + 1] - x[i + 1, j]) - 2 * G12 * (x[i, j] - x[i + 1, j])
-                    Uy = 2 * G11 * (y[i + 1, j + 1] - y[i + 1, j]) - 2 * G12 * (y[i, j] - y[i + 1, j])
-                    Uxx = 2 * G11
-                    Uyy = Uxx
-                    Uxy = 0
-                    Vxy = 0
-                    Vx = (-y[i, j] + y[i + 1, j]) * Dk
-                    Vy = (x[i, j] - x[i + 1, j]) * Dk
-                    Vxx = Vyy = 0
-                    Fx = (Ux - Fk * Vx) / V
-                    Fy = (Uy - Fk * Vy) / V
-                    Fxx = (Uxx - 2 * Fx * Vx - Fk * Vxx) / V
-                    Fyy = (Uyy - 2 * Fy * Vy - Fk * Vyy) / V
-                    Fxy = (Uxy - Fx * Vy - Fy * Vx - Fk * Vxy) / V
+                    Fx = (
+                                 ((x1 - x2) ** 2 + (y1 - y2) ** 2) * (G22 * (-y1 + y2) + 2 * G12 * (y1 - y3)) -
+                                 G11 * (-2 * x1 * (x2 * y1 + x3 * y2) +
+                                        (y1 - y2) * (-x3 ** 2 + (y1 - y3) ** 2) +
+                                        x1 ** 2 * (y1 + y2 - 2 * y3) +
+                                        2 * x2 * x3 * (y1 - y3) +
+                                        2 * x1 * (x2 + x3) * y3)
+                         ) / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 2)
+                    Fy = (
+                                 (G22 * (x1 - x2) + 2 * G12 * (-x1 + x3)) * ((x1 - x2) ** 2 + (y1 - y2) ** 2) +
+                                 G11 * (x1 ** 3 - x1 ** 2 * (x2 + 2 * x3) + x2 * (-x3 ** 2 + (y1 - y3) ** 2) -
+                                        2 * x3 * (y1 - y2) * (y1 - y3) +
+                                        x1 * (2 * x2 * x3 + x3 ** 2 + (y1 - y3) * (y1 - 2 * y2 + y3)))
+                         ) / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 2)
+                    Fxx = -(
+                            2 * ((x1 - x2) ** 2 + (y1 - y2) ** 2) *
+                            (G11 * (y1 - y3) ** 2 + (y1 - y2) * (G22 * (y1 - y2) + 2 * G12 * (-y1 + y3)))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
+                    )
+                    Fyy = -(
+                            2 * (G11 * (x1 - x3) ** 2 + (x1 - x2) * (G22 * (x1 - x2) + 2 * G12 * (-x1 + x3))) *
+                            ((x1 - x2) ** 2 + (y1 - y2) ** 2) /
+                            (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
+                    )
+                    Fxy = (
+                            2 * ((x1 - x2) ** 2 + (y1 - y2) ** 2) *
+                            (G22 * (x1 - x2) * (y1 - y2) +
+                             G11 * (x1 - x3) * (y1 - y3) +
+                             G12 * (x2 * y1 + x3 * y1 - x3 * y2 - x2 * y3 + x1 * (-2 * y1 + y2 + y3)))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
+                    )
                     Rx[i + 1, j + 1] += Fx / weight
                     Rxy[i + 1, j + 1] += Fxy / weight
                     Ry[i + 1, j + 1] += Fy / weight
                     Rxx[i + 1, j + 1] += Fxx / weight
                     Ryy[i + 1, j + 1] += Fyy / weight
 
-    if flag != 1:
-        print("aproxim: ", aproximation/((nx-1)*(ny-1)*8))
     return aproximation/((nx-1)*(ny-1)*8), Rx, Ry, Rxx, Ryy, Rxy, flag
 
 
-def mimimize(omega, canon, grid_shape, tau, eps, count=0):
-    iter_flag = 0
-    nx, ny = grid_shape
-    Fk, Rx, Ry, Rxx, Ryy, Rxy, flag = functional2(omega, canon, grid_shape)
-    x_old = omega[0]
-    y_old = omega[1]
-    maxdif = 0.0
-    if count >= 996:
-        print("count limit")
-        print("value = ", Fk)
-        return np.array([x_old, y_old]), iter_flag, tau
-    x_new = x_old.copy()
-    y_new = y_old.copy()
-    for i in range(1, nx-1):
-        for j in range(1, ny-1):
-            x_new[i, j] = x_old[i, j] - tau * (Rx[i, j] * Ryy[i, j] - Ry[i, j] * Rxy[i, j]) / (Rxx[i, j] * Ryy[i, j] - Rxy[i, j] ** 2)
-            y_new[i, j] = y_old[i, j] - tau * (Ry[i, j] * Rxx[i, j] - Rx[i, j] * Rxy[i, j]) / (Rxx[i, j] * Ryy[i, j] - Rxy[i, j] ** 2)
-            if abs(x_new[i, j] - x_old[i, j]) > maxdif:
-                maxdif = abs(x_new[i, j] - x_old[i, j])
-            if abs(y_new[i, j] - y_old[i, j]) > maxdif:
-                maxdif = abs(y_new[i, j] - y_old[i, j])
-    new_grid = np.array([x_new, y_new])
-    temp_func = functional2(new_grid, canon, (nx, ny))
-    flag = temp_func[6]
-    value = temp_func[0]
-    if flag == 1 or (value > Fk):
-        tau_new = tau*0.5
-        count += 1
-        if value > Fk:
-            print("minus value")
-        return mimimize(np.array([x_old, y_old]), canon, grid_shape, tau_new, eps, count)
-    else:
-        if maxdif <= eps:
-            print("value = ", value)
-            iter_flag = 1
-            return np.array([x_old, y_old]), iter_flag, tau
-        else:
-            count += 1
-            return mimimize(np.array([x_new, y_new]), canon, grid_shape, tau, eps, count)
+def mimimize(omega, canon, grid_shape, tau, eps, stop_flag=[False]):
+
+    maxdif = 99999999
+    x, y = omega
+    value = 0
+    iter_count = 0
+    while maxdif > eps:
+        if stop_flag[0]:
+            print("Алгоритм прерван пользователем")
+            break
+
+        Fk, Rx, Ry, Rxx, Ryy, Rxy, _ = functional2((x, y), canon, grid_shape)
+        if iter_count == 0:
+            print("start value = ", Fk)
+        value = Fk
+
+        # Вычисляем только внутренние точки
+        denom = Rxx[1:-1, 1:-1] * Ryy[1:-1, 1:-1] - Rxy[1:-1, 1:-1] ** 2
+        denom[denom == 0] = 1e-12
+
+        dx = -tau * (Rx[1:-1, 1:-1] * Ryy[1:-1, 1:-1] - Ry[1:-1, 1:-1] * Rxy[1:-1, 1:-1]) / denom
+        dy = -tau * (Ry[1:-1, 1:-1] * Rxx[1:-1, 1:-1] - Rx[1:-1, 1:-1] * Rxy[1:-1, 1:-1]) / denom
+
+        # Создаём новые массивы, копируя старые
+        x_new = x.copy()
+        y_new = y.copy()
+
+        # Обновляем только внутренние элементы
+        x_new[1:-1, 1:-1] += dx
+        y_new[1:-1, 1:-1] += dy
+
+        maxdif = max(np.max(np.abs(dx)), np.max(np.abs(dy)))
+        print("maxdif is now at: ", maxdif)
+
+        if stop_flag[0]:
+            print("Алгоритм прерван пользователем")
+            break
+
+        new_grid = (x_new, y_new)
+        Fk_new, *_, flag_new = functional2(new_grid, canon, grid_shape)
+
+        if flag_new == 1 or Fk_new > Fk:
+            tau *= 0.5
+            print("tau went down")
+            if Fk_new > Fk:
+                print("minus value")
+            continue
+        iter_count += 1
+        x, y = x_new, y_new
+
+    print("func value = ", value)
+    print("count of iterations = ", iter_count)
+
+    return np.array([x, y]), tau
 
 
 def plot_grid(grid, nx, ny, title):
@@ -1096,75 +1389,85 @@ plt.show()
 """
 
 xup = np.array([
-    -1.987072766474143, -1.890210852412545, -1.7958789826267216, -1.7091372456682226,
-    -1.6249255529854985, -1.5407138603027744, -1.4565021676200502, -1.3722904749373261,
-    -1.288078782254602, -1.2038670895718777, -1.1326103316297087, -1.0841239721695128,
-    -0.9973822352110138, -0.897990276873641, -0.7985983185362677, -0.7143866258535438,
-    -0.6301749331708195, -0.5459632404880956, -0.4617515478053713, -0.3775398551226474,
-    -0.2933281624399231, -0.20911646975719878, -0.1249047770744749, -0.04069308439175057,
-    0.043518608290973315, 0.12773030097369764, 0.21194199365642152, 0.29615368633914585,
-    0.38036537902186973, 0.46457707170459406, 0.5487887643873184, 0.6330004570700423,
-    0.7172121497527666, 0.8014238424354905, 0.8856355351182148, 0.9698472278009391,
-    1.0540589204836626, 1.138270613166387, 1.2299708675558763, 1.2987991523428302,
-    1.3396584440227701, 1.3826691967109457, 1.4132698052142953, 1.464590922311943,
-    1.5488026149946674, 1.6330143076773918, 1.7172260003601152, 1.8014376930428395,
-    1.8856493857255638, 1.9825112997871632, 2.0692530367456627, 2.163584906531487,
-    2.270566997696187
+    0.014031364832386428, 0.11417310395451596, 0.20736382132788145,
+    0.30816392360930034, 0.39120879443859513, 0.4818630501759429,
+    0.5649079210052377, 0.6479527918345325, 0.733534124299845,
+    0.8064331485850691, 0.8337464023318986, 0.8762784258948337,
+    0.9517139118160758, 1.014467089557229, 1.0848296522064351,
+    1.1551922148556413, 1.2255547775048479, 1.295917340154054,
+    1.3662799028032606, 1.4366424654524668, 1.507005028101673,
+    1.5773675907508795, 1.6477301534000857, 1.7180927160492918,
+    1.7884552786984984, 1.8588178413477046, 1.9291804039969107,
+    1.9995429666461173, 2.0699055292953235, 2.14026809194453,
+    2.210630654593736, 2.2809932172429424, 2.351355779892149,
+    2.421718342541355, 2.4920809051905617, 2.562443467839768,
+    2.632806030488974, 2.7031685931381806, 2.7735311557873867,
+    2.843893718436593, 2.9142562810857995, 2.984618843735006,
+    3.049955509052126, 3.1026098661891557, 3.1577536590222546,
+    3.197678682039245, 3.275650629596505, 3.361231962061819,
+    3.449349756163152, 3.5323946269924478, 3.617975959457762,
+    3.7086302151951123, 3.796748009296445, 3.887402265033795,
+    3.979981645187815
 ])
 
 yup = np.array([
-    -0.3956929864149973, -0.39573392551646036, -0.39577379528391, -0.3958104570493193,
-    -0.3958460494807152, -0.39588164191211117, -0.395917234343507, -0.39595282677490296,
-    -0.3959884192062988, -0.39602401163769474, -0.3980860016311343, -0.45618639357858526,
-    -0.4784046917872816, -0.4575388110877494, -0.419275462611749, -0.39128514355990596,
-    -0.3674712348467418, -0.34904269735976867, -0.3367688698455851, -0.32878135820530874,
-    -0.3228820517343717, -0.32082943899642824, -0.323942386414219, -0.33046240542408967,
-    -0.339949873885127, -0.35251469733255913, -0.36793706469592924, -0.38676650365137943,
-    -0.4083435809875392, -0.432998013310094, -0.46072980061904356, -0.49142903737915955,
-    -0.5248759125199853, -0.5618397647881195, -0.603199838465389, -0.6486264169461092,
-    -0.6961412005961682, -0.7451946617394252, -0.8035103472564249, -0.8546404984710649,
-    -0.8791593751453624, -0.8943931075006826, -0.87749485699123, -0.8754607361214952,
-    -0.8754963285528912, -0.8755319209842869, -0.8755675134156828, -0.8756031058470788,
-    -0.8756386982784747, -0.8756796373799378, -0.8757162991453471, -0.8757561689127966,
-    -0.8758013853503135
+    1.5, 1.5, 1.5,
+    1.5, 1.5, 1.5,
+    1.5, 1.5, 1.5,
+    1.5, 1.4622233688694797, 1.4334183923977117,
+    1.4238543680331293, 1.4378877108122743, 1.4641552498604171,
+    1.4898230734051778, 1.511772660828968, 1.5307236707358474,
+    1.5451168428170217, 1.5557917787772255, 1.562508592415107,
+    1.5674262595428414, 1.568385804348253, 1.568385804348253,
+    1.5652672837306651, 1.5590302424954898, 1.5496746806427266,
+    1.5387598584811695, 1.5256860605074363, 1.509853571218145,
+    1.492341878519383, 1.47183160830371, 1.44952219157789,
+    1.4249338559392175, 1.398786259991751, 1.3694002003260208,
+    1.3371355062440555, 1.3019921777458554, 1.264090157932097,
+    1.224269048507515, 1.1832485080761688, 1.1398291056312935,
+    1.0940108411728893, 1.0580907583490216, 1.038143028289738,
+    1.05, 1.05, 1.05,
+    1.05, 1.05, 1.05,
+    1.05, 1.05, 1.05,
+    1.05
 ])
 
 xlow = np.array([
-    -1.987072766474143, -1.8978009852398694, -1.8009390711782711, -1.7116672899439973,
-    -1.6274555972612732, -1.543243904578549, -1.459032211895825, -1.3722904749373261,
-    -1.288078782254602, -1.2038670895718777, -1.1385542208406791, -1.1114558373384673,
-    -1.0564966273771104, -0.9959694732614026, -0.9196526267676837, -0.8354409340849598,
-    -0.7512292414022355, -0.6670175487195116, -0.5828058560367873, -0.49859416335406337,
-    -0.41438247067133904, -0.3301707779886147, -0.24595908530589083, -0.1617473926231665,
-    -0.07753569994044263, 0.0066759927422817, 0.11943840404067751, 0.2314805837569276,
-    0.335932630645853, 0.42773445615590244, 0.5119461488386263, 0.5961578415213507,
-    0.6803695342040745, 0.7645812268867989, 0.8487929195695227, 0.9532449664584477,
-    1.0551669690715975, 1.146765652340521, 1.2228793565931197, 1.313970184259246,
-    1.3593170727203039, 1.3918105975613746, 1.4190408916097659, 1.5133819951338157,
-    1.610243909195415, 1.7071058232570153, 1.7963776044912891, 1.8856493857255638,
-    1.9698610784082882, 2.0540727710910125, 2.1306943309464113, 2.204785846526035,
-    2.270566997696187
+    0.014031364832386428, 0.11417310395451596, 0.20736382132788145, 0.30816392360930034,
+    0.39120879443859513, 0.4818630501759429, 0.5649079210052377, 0.6479527918345325,
+    0.733534124299845, 0.8064331485850691, 0.8337464023318986, 0.8762784258948337,
+    0.9517139118160758, 1.014467089557229, 1.0848296522064351, 1.1551922148556413,
+    1.2255547775048479, 1.295917340154054, 1.3662799028032606, 1.4366424654524668,
+    1.507005028101673, 1.5773675907508795, 1.6477301534000857, 1.7180927160492918,
+    1.7884552786984984, 1.8588178413477046, 1.9291804039969107, 1.9995429666461173,
+    2.0699055292953235, 2.14026809194453, 2.210630654593736, 2.2809932172429424,
+    2.351355779892149, 2.421718342541355, 2.4920809051905617, 2.562443467839768,
+    2.632806030488974, 2.7031685931381806, 2.7735311557873867, 2.843893718436593,
+    2.9142562810857995, 2.984618843735006, 3.049955509052126, 3.1026098661891557,
+    3.1577536590222546, 3.197678682039245, 3.275650629596505, 3.361231962061819,
+    3.449349756163152, 3.5323946269924478, 3.617975959457762, 3.6883385221069704,
+    3.796748009296445, 3.887402265033795, 3.979981645187815
 ])
 
 ylow = np.array([
-    -1.5177132488915386, -1.5176464211258, -1.5176873602272631, -1.517725091326686,
-    -1.517760683758082, -1.5177962761894777, -1.5178318686208736, -1.5178685303862829,
-    -1.5179041228176788, -1.5179397152490748, -1.5163516260082557, -1.4383716874759258,
-    -1.3685304740934108, -1.3113375436591896, -1.2575837212137575, -1.2149759659765391,
-    -1.1832488587269312, -1.1596547610842236, -1.143094617696133, -1.1343377673092578,
-    -1.1322851545713144, -1.1342990466368215, -1.1411487822523771, -1.1521749282066118,
-    -1.1664982402176982, -1.1834592850742658, -1.2124055445850601, -1.2426931184836019,
-    -1.2775256453712738, -1.3101385182791194, -1.3440250155608586, -1.3808789622937643,
-    -1.4235579023937746, -1.4705231583676917, -1.519027091834807, -1.5785204926604453,
-    -1.6475649648805175, -1.7154533520411932, -1.781379346270385, -1.8688197113819887,
-    -1.916352284861543, -1.9554597152587587, -1.9965180494156534, -1.9973970614880834,
-    -1.9974380005895465, -1.9974789396910095, -1.9975166707904322, -1.9975544018898548,
-    -1.9975899943212507, -1.9976255867526467, -1.9976579711820026, -1.9976892862773448,
-    -1.997717861692112
+    0.457, 0.457, 0.457, 0.457,
+    0.457, 0.457, 0.457, 0.457,
+    0.457, 0.457, 0.5300199790389697, 0.5876556805333033,
+    0.6577526731178749, 0.7005995752190535, 0.7370366057926203, 0.764399344591618,
+    0.7846540167611713, 0.8019101114138132, 0.8112185377322758, 0.8151138126755304,
+    0.8150509652964626, 0.8131889714072478, 0.8056739399414732, 0.7955044484160492,
+    0.7856062667815127, 0.7708946492751505, 0.7547594264054382, 0.7370649432269323,
+    0.7172114842362496, 0.6945993339300089, 0.6703079802142977, 0.6447129642359133,
+    0.6156238864931454, 0.5842558898375216, 0.5479388023646321, 0.5100781664277159,
+    0.47103381132880107, 0.42911082181365257, 0.38442914098294434, 0.34121820104988787,
+    0.2900281690931181, 0.22965961410587044, 0.16858711235933033, 0.11741279224732759,
+    0.06017692659482288, 0.01, 0.01, 0.01,
+    0.01, 0.01, 0.01, 0.01,
+    0.01, 0.01, 0.01
 ])
 
 
-def lr_points(x_upper, y_upper, x_lower, y_lower, n_points=53):
+def lr_points(x_upper, y_upper, x_lower, y_lower, n_points=55):
     # Левые и правые границы (линии от нижних точек к верхним)
     y_left = np.linspace(y_lower[0], y_upper[0], n_points)
     y_right = np.linspace(y_lower[-1], y_upper[-1], n_points)
@@ -1173,26 +1476,7 @@ def lr_points(x_upper, y_upper, x_lower, y_lower, n_points=53):
     return x_upper, y_upper, x_lower, y_lower, x_right, y_right, x_left, y_left
 
 
-def lopatki_points(n_points):
-    x_left, x_right = -2.5, 2.5  # Границы по x
-    y_lower, y_shift = -2, 3  # Смещение верхней границы
-
-    x_lower = np.linspace(x_left, x_right, n_points)  # Обрезка слева сильнее
-    y_lower = 1 * np.cos(1.5 * (x_lower + 0.17)) + y_lower
-
-    x_upper = x_lower.copy()
-    y_upper = 0.55 * np.sin(2 * (x_lower + 2)) + 0.55 * np.cos(3 * (x_lower + 2))
-
-    # Левые и правые границы (вертикальные линии)
-    y_left = np.linspace(y_lower[0], y_upper[0], n_points)
-    y_right = np.linspace(y_lower[-1], y_upper[-1], n_points)
-    x_left = np.linspace(x_lower[0], x_upper[0], n_points)
-    x_right = np.linspace(x_lower[-1], x_upper[-1], n_points)
-
-    return x_upper, y_upper, x_lower, y_lower, x_right, y_right, x_left, y_left
-
-
-elem_sdvig = 10
+elem_sdvig = 9
 
 
 def implicit_transfinite_better(discr, nod=None):
@@ -1278,38 +1562,39 @@ def implicit_transfinite_better(discr, nod=None):
         for i in range(n):
             x0 = X_res[0, i]
             xN = X_res[elem_sdvig, i]
-            X_res[point, i] = x0 + (xN - x0)*(ind/elem_sdvig)**0.15
+            X_res[point, i] = x0 + (xN - x0)*(ind/elem_sdvig)**0.5
         ind += 1
     ind = 1
     for point in range(n-elem_sdvig, n-1):  # pravo
         for i in range(n):
             x0 = X_res[n-(elem_sdvig+1), i]
             xN = X_res[n-1, i]
-            X_res[point, i] = xN - (xN - x0)*(1-(ind/elem_sdvig))**0.3
+            X_res[point, i] = xN - (xN - x0)*(1-(ind/elem_sdvig))**0.5
         ind += 1
     return [X_res, Y_res]
 
 
 node2 = [11, 11, 0.6, 0.5]
 
-nx = ny = 53    # -----------------------------------------------------------
+nx = ny = 55    # ------------------------------------------------------------------------------------------------------
 # canon_grid = implicit_transfinite_interpol(nx, sq_t1, sq_b1, sq_l1, sq_r1)
 # canon_grid, count = winslow_without_implicit(NX, Xyt, Xyb, Xyr, Xyl, treshhold)
 # canon_grid = transfinite_interpol(nx, Xyt, Xyb, Xyl, Xyr)
 # canon_grid = implicit_transfinite_interpol(nx, chevt, chevb, chevr, chevl)
 # canon_grid = implicit_transfinite_interpol(nx, myt, myb, myr, myl)
-canon_grid = implicit_transfinite_interpol(nx, sq_t1, sq_b1, sq_l1, sq_r1)
+canon_grid = implicit_transfinite_interpol(nx, sq_t2, sq_b2, sq_l2, sq_r2)
 
 # start
 coef_temp = 1
-dc = 0.04
+dc = 0.03
+
 for i in range(nx//2 + coef_temp, nx-1):    # низ
     for j in range(ny):
-        if i != 0 and i != ny-1 and elem_sdvig < j < ny - (elem_sdvig+1):
+        if i != 0 and i != ny-1 and elem_sdvig-1 < j < ny - elem_sdvig:
             dense_coef = 1
             razn = abs(canon_grid[0][i][j] - canon_grid[0][i][j]**(dense_coef+dc*coef_temp))
             canon_grid[0][i][j] = canon_grid[0][i][j]**(dense_coef+dc*coef_temp)
-            canon_grid[0][nx//2 - coef_temp][j] += razn*1.15
+            canon_grid[0][nx//2 - coef_temp][j] += razn
     coef_temp += 1
 
 """ind = 1
@@ -1351,16 +1636,37 @@ for point in range(1, elem_sdvig):  # pravo
     for i in range(nx):
         x0 = canon_grid[1][i][0]
         xN = canon_grid[1][i][elem_sdvig]
-        canon_grid[1][i][point] = x0 + (xN - x0)*(ind/elem_sdvig)**1
+        canon_grid[1][i][point] = x0 + (xN - x0)*(ind/elem_sdvig)**0.5
     ind += 1
 ind = 1
 for point in range(nx-elem_sdvig, nx-1):    # levo
     for i in range(nx):
         x0 = canon_grid[1][i][nx-(elem_sdvig+1)]
         xN = canon_grid[1][i][nx-1]
-        canon_grid[1][i][point] = xN - (xN - x0)*(1-(ind/elem_sdvig))**1
+        canon_grid[1][i][point] = xN - (xN - x0)*(1-(ind/elem_sdvig))**0.5
     ind += 1
 # finish
+
+cells_x = np.empty((nx - 1, ny - 1), dtype=object)
+cells_y = np.empty((nx - 1, ny - 1), dtype=object)
+for i in range(nx - 1):
+    for j in range(ny - 1):
+        cells_x[i, j] = np.zeros((2, 2))
+        cells_y[i, j] = np.zeros((2, 2))
+
+for i in range(nx - 1):
+    for j in range(ny - 1):
+        cx = cells_x[i, j]
+        cy = cells_y[i, j]
+        cx[0, 0] = canon_grid[0][i, j]
+        cy[0, 0] = canon_grid[1][i, j]
+        cx[1, 1] = canon_grid[0][i + 1, j + 1]
+        cy[1, 1] = canon_grid[1][i + 1, j + 1]
+        cx[1, 0] = canon_grid[0][i + 1, j]
+        cy[1, 0] = canon_grid[1][i + 1, j]
+        cx[0, 1] = canon_grid[0][i, j + 1]
+        cy[0, 1] = canon_grid[1][i, j + 1]
+cells = np.array([cells_x, cells_y])
 
 
 canon_grid[0] = np.flip(canon_grid[0], axis=0)
@@ -1368,7 +1674,7 @@ canon_grid[1] = np.flip(canon_grid[1], axis=0)
 canon_grid[0] = np.transpose(canon_grid[0])
 canon_grid[1] = np.transpose(canon_grid[1])
 
-canon_grid, count = winslow(nx, canon_grid[0], canon_grid[1], treshhold, 6)
+canon_grid, count = winslow(nx, canon_grid[0], canon_grid[1], treshhold, 0)
 
 xx, yy = canon_grid[0], canon_grid[1]
 canon_grid = (xx, yy)
@@ -1392,7 +1698,7 @@ print("y ", yy[0, 0], yy[nx-1, ny-1])"""
 # omega_grid2, count = winslow_without_implicit(nx, Xyt, Xyb, Xyr, Xyl, treshhold)
 # omega_grid2 = implicit_transfinite_interpol(nx, myt, myb, myr, myl)
 # omega_grid2 = transfinite_interpol(nx, Xyt, Xyb, Xyl, Xyr)
-# omega_grid2 = implicit_transfinite_new(nx)  # vot eto ne na diplom
+# omega_grid2 = implicit_transfinite_new(nx)
 omega_grid2 = implicit_transfinite_better(nx)  # vot eto na diplom
 # omega_grid2 = implicit_transfinite_interpol(nx, chevt, chevb, chevr, chevl)
 # omega_grid2 = transfinite_interpol(20, horst, horsb, horsr, horsl)
@@ -1415,7 +1721,7 @@ for i in range(nx-1, -1, -1):
     print("\n")"""
 """print("check2: ", omega_grid2[0][0, 0], omega_grid2[0][nx-1, ny-1])"""
 
-omega_grid2, _ = winslow(nx, omega_grid2[0], omega_grid2[1], treshhold, 25)
+# omega_grid2, _ = winslow(nx, omega_grid2[0], omega_grid2[1], treshhold, 25)
 
 plt.plot(omega_grid2[0], omega_grid2[1], c="b", linewidth=1)
 plt.plot(np.transpose(omega_grid2[0]), np.transpose(omega_grid2[1]), c="b", linewidth=1)
@@ -1431,18 +1737,20 @@ plt.show()
 global_iter_flag = 0
 while_iter = 0
 new_tau = 0
-while global_iter_flag != 1:
-    if while_iter == 0:
-        omega_grid2, flag, iter_tau = mimimize(omega_grid2, canon_grid, (nx, ny), 3, 1e-7)
-        global_iter_flag = flag
-        new_tau = iter_tau
-        while_iter += 1
-    else:
-        omega_grid2, flag, iter_tau = mimimize(omega_grid2, canon_grid, (nx, ny), new_tau, 1e-7)
-        global_iter_flag = flag
-        new_tau = iter_tau
-# omega_grid2, count = winslow(nx, omega_grid2[0], omega_grid2[1], treshhold, 8)
+stop_flag = [False]
 
+
+def stop_optimization():
+    input("Нажмите Enter для остановки...\n")
+    stop_flag[0] = True
+
+
+# Запуск "слушателя кнопки" в отдельном потоке
+threading.Thread(target=stop_optimization).start()
+
+omega_grid2, flag = mimimize(omega_grid2, canon_grid, (nx, ny), 5, 1e-5, stop_flag=stop_flag)
+
+# omega_grid2, count = winslow(nx, omega_grid2[0], omega_grid2[1], treshhold, 8)
 
 new_grid = omega_grid2
 plt.plot(new_grid[0], new_grid[1], c="b", linewidth=1)

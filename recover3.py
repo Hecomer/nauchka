@@ -6,6 +6,7 @@ from scipy.optimize import minimize
 import sys
 import threading
 import time
+from sklearn.decomposition import PCA
 sys.setrecursionlimit(10000)
 
 
@@ -61,6 +62,26 @@ def Xyt(s):
     x = s
     y = 1 - 3 * s + 3 * s**2
     return np.array([x, y])
+
+
+def sq_t2(s):
+    y = 4
+    return y
+
+
+def sq_b2(s):
+    y = 0
+    return y
+
+
+def sq_l2(s):
+    y = 1000000*s
+    return y
+
+
+def sq_r2(s):
+    y = 1000000 - 1000000*s
+    return y
 
 
 def sq_t1(s):
@@ -583,20 +604,39 @@ def winslow(discr, x_old, y_old, treshhold, maxcount):
     return np.array([x_new, y_new]), count
 
 
-def functional2(grid_omega, grid_canon, grid_shape):
+def pca_bounding_box(points):
+    # Центрирование
+    mean = points.mean(axis=0)
+    centered = points - mean
+
+    # PCA
+    pca = PCA(n_components=2)
+    transformed = pca.fit_transform(centered)
+
+    # Прямоугольник в PCA-пространстве
+    min_vals = np.min(transformed, axis=0)
+    max_vals = np.max(transformed, axis=0)
+
+    rect_pca = np.array([
+        [min_vals[0], min_vals[1]],
+        [max_vals[0], min_vals[1]],
+        [max_vals[0], max_vals[1]],
+        [min_vals[0], max_vals[1]],
+    ])
+
+    # Обратное преобразование
+    rect_global = pca.inverse_transform(rect_pca) + mean
+    return rect_global
+
+
+def functional2(grid_omega, cells, grid_shape):
+    cells_x = cells[0]
+    cells_y = cells[1]
     nx, ny = grid_shape
     aproximation = 0
     x = grid_omega[0]
     y = grid_omega[1]
-    X = grid_canon[0]
-    Y = grid_canon[1]
-    X = np.reshape(X, (nx, ny))
-    Y = np.reshape(Y, (nx, ny))
     x = np.reshape(x, (nx, ny))
-    """print("x00: ", x[0, 0])
-    print("x1010: ", x[nx-1, ny-1])
-    print("x010: ", x[0, ny-1])
-    print("x100: ", x[nx-1, 0])"""
     y = np.reshape(y, (nx, ny))
 
     flag = 0
@@ -611,19 +651,28 @@ def functional2(grid_omega, grid_canon, grid_shape):
 
     for i in range(nx - 1):
         for j in range(ny - 1):
-            for k in range(0, 4):
+            # вот здесь X Y определять
+            X1 = cells_x[i, j][0, 0]
+            X2 = cells_x[i, j][0, 1]
+            X3 = cells_x[i, j][1, 1]
+            X4 = cells_x[i, j][1, 0]
+            Y1 = cells_y[i, j][0, 0]
+            Y2 = cells_y[i, j][0, 1]
+            Y3 = cells_y[i, j][1, 1]
+            Y4 = cells_y[i, j][1, 0]
+            for k in range(4):
                 if k == 0:  # lb corner perf; k = i,j; k+1 = i,j+1; k-1 = i+1,j
-                    G11 = ((X[i, j + 1] - X[i, j]) ** 2) + ((Y[i, j + 1] - Y[i, j]) ** 2)
-                    G12 = (X[i, j + 1] - X[i, j]) * (X[i + 1, j] - X[i, j]) + (Y[i, j + 1] - Y[i, j]) * (
-                                Y[i + 1, j] - Y[i, j])
-                    G22 = (X[i + 1, j] - X[i, j]) ** 2 + (Y[i + 1, j] - Y[i, j]) ** 2
+                    G11 = ((X2 - X1) ** 2) + ((Y2 - Y1) ** 2)
+                    G12 = (X2 - X1) * (X4 - X1) + (Y2 - Y1) * (
+                                Y4 - Y1)
+                    G22 = (X4 - X1) ** 2 + (Y4 - Y1) ** 2
                     Jk = (x[i, j + 1] - x[i, j]) * (y[i + 1, j] - y[i, j]) - (x[i + 1, j] - x[i, j]) * (
                                 y[i, j + 1] - y[i, j])
                     if Jk <= 0:
                         print("1: flag")
                         flag = 1
-                    Dk = (X[i, j + 1] - X[i, j]) * (Y[i + 1, j] - Y[i, j]) - (X[i + 1, j] - X[i, j]) * (
-                                Y[i, j + 1] - Y[i, j])
+                    Dk = (X2 - X1) * (Y4 - Y1) - (X4 - X1) * (
+                                Y2 - Y1)
                     alpha = ((x[i, j + 1] - x[i, j]) ** 2) * G22 - 2 * (x[i, j + 1] - x[i, j]) * (
                             x[i + 1, j] - x[i, j]) * G12 + ((
                                                                     x[i + 1, j] - x[i, j]) ** 2) * G11
@@ -764,20 +813,20 @@ def functional2(grid_omega, grid_canon, grid_shape):
                     Ryy[i + 1, j] += Fyy / weight
 
                 elif k == 1:    # rt corner perf xk=x[i+1, j+1], xk+1=x[i+1, j], xk-1=x[i, j+1]
-                    G11 = ((X[i + 1, j] - X[i + 1, j + 1]) ** 2) + (Y[i + 1, j] - Y[i + 1, j + 1]) ** 2
-                    G12 = (X[i + 1, j] - X[i + 1, j + 1]) * (X[i, j + 1] - X[i + 1, j + 1]) + (
-                                Y[i + 1, j] - Y[i + 1, j + 1]) * (
-                                  Y[i, j + 1] - Y[i + 1, j + 1])
-                    G22 = ((X[i, j + 1] - X[i + 1, j + 1]) ** 2) + (Y[i, j + 1] - Y[i + 1, j + 1]) ** 2
+                    G11 = ((X4 - X3) ** 2) + (Y4 - Y3) ** 2
+                    G12 = (X4 - X3) * (X2 - X3) + (
+                                Y4 - Y3) * (
+                                  Y2 - Y3)
+                    G22 = ((X2 - X3) ** 2) + (Y2 - Y3) ** 2
                     Jk = (x[i + 1, j] - x[i + 1, j + 1]) * (y[i, j + 1] - y[i + 1, j + 1]) - (
                                 x[i, j + 1] - x[i + 1, j + 1]) * (
                                  y[i + 1, j] - y[i + 1, j + 1])
                     if Jk <= 0:
                         print("2: flag")
                         flag = 1
-                    Dk = (X[i + 1, j] - X[i + 1, j + 1]) * (Y[i, j + 1] - Y[i + 1, j + 1]) - (
-                                X[i, j + 1] - X[i + 1, j + 1]) * (
-                                 Y[i + 1, j] - Y[i + 1, j + 1])
+                    Dk = (X4 - X3) * (Y2 - Y3) - (
+                                X2 - X3) * (
+                                 Y4 - Y3)
                     alpha = ((x[i + 1, j] - x[i + 1, j + 1]) ** 2) * G22 - 2 * (x[i + 1, j] - x[i + 1, j + 1]) * (
                             x[i, j + 1] - x[i + 1, j + 1]) * G12 + ((
                                                                             x[i, j + 1] - x[i + 1, j + 1]) ** 2) * G11
@@ -920,18 +969,18 @@ def functional2(grid_omega, grid_canon, grid_shape):
                     Ryy[i, j + 1] += Fyy / weight
 
                 elif k == 2:    # rb corner perf xk = x[i, j + 1], xk+1=x[i+1, j+1], xk-1=x[i, j]
-                    G11 = ((X[i + 1, j + 1] - X[i, j + 1]) ** 2) + (Y[i + 1, j + 1] - Y[i, j + 1]) ** 2
-                    G12 = (X[i + 1, j + 1] - X[i, j + 1]) * (X[i, j] - X[i, j + 1]) + (
-                            Y[i + 1, j + 1] - Y[i, j + 1]) * (
-                                  Y[i, j] - Y[i, j + 1])
-                    G22 = (X[i, j] - X[i, j + 1]) ** 2 + (Y[i, j] - Y[i, j + 1]) ** 2
+                    G11 = ((X3 - X2) ** 2) + (Y3 - Y2) ** 2
+                    G12 = (X3 - X2) * (X1 - X2) + (
+                            Y3 - Y2) * (
+                                  Y1 - Y2)
+                    G22 = (X1 - X2) ** 2 + (Y1 - Y2) ** 2
                     Jk = (x[i + 1, j + 1] - x[i, j + 1]) * (y[i, j] - y[i, j + 1]) - (x[i, j] - x[i, j + 1]) * (
                             y[i + 1, j + 1] - y[i, j + 1])
                     if Jk <= 0:
                         print("3: flag")
                         flag = 1
-                    Dk = (X[i + 1, j + 1] - X[i, j + 1]) * (Y[i, j] - Y[i, j + 1]) - (X[i, j] - X[i, j + 1]) * (
-                            Y[i + 1, j + 1] - Y[i, j + 1])
+                    Dk = (X3 - X2) * (Y1 - Y2) - (X1 - X2) * (
+                            Y3 - Y2)
                     alpha = ((x[i + 1, j + 1] - x[i, j + 1]) ** 2) * G22 - 2 * (x[i + 1, j + 1] - x[i, j + 1]) * (
                             x[i, j] - x[i, j + 1]) * G12 + ((
                                                                     x[i, j] - x[i, j + 1]) ** 2) * G11
@@ -1074,18 +1123,18 @@ def functional2(grid_omega, grid_canon, grid_shape):
                     Ryy[i, j] += Fyy / weight
 
                 elif k == 3:    # lt corner perf xk=x[i+1, j], xk+1=x[i, j], xk-1=x[i+1, j+1]
-                    G11 = (X[i, j] - X[i + 1, j]) ** 2 + (Y[i, j] - Y[i + 1, j]) ** 2
-                    G12 = (X[i, j] - X[i + 1, j]) * (X[i + 1, j + 1] - X[i + 1, j]) + (
-                            Y[i, j] - Y[i + 1, j]) * (
-                                  Y[i + 1, j + 1] - Y[i + 1, j])
-                    G22 = (X[i + 1, j + 1] - X[i + 1, j]) ** 2 + (Y[i + 1, j + 1] - Y[i + 1, j]) ** 2
+                    G11 = (X1 - X4) ** 2 + (Y1 - Y4) ** 2
+                    G12 = (X1 - X4) * (X3 - X4) + (
+                            Y1 - Y4) * (
+                                  Y3 - Y4)
+                    G22 = (X3 - X4) ** 2 + (Y3 - Y4) ** 2
                     Jk = (x[i, j] - x[i + 1, j]) * (y[i + 1, j + 1] - y[i + 1, j]) - (x[i + 1, j + 1] - x[i + 1, j]) * (
                             y[i, j] - y[i + 1, j])
                     if Jk <= 0:
                         print("4: flag")
                         flag = 1
-                    Dk = (X[i, j] - X[i + 1, j]) * (Y[i + 1, j + 1] - Y[i + 1, j]) - (X[i + 1, j + 1] - X[i + 1, j]) * (
-                            Y[i, j] - Y[i + 1, j])
+                    Dk = (X1 - X4) * (Y3 - Y4) - (X3 - X4) * (
+                            Y1 - Y4)
                     alpha = ((x[i, j] - x[i + 1, j]) ** 2) * G22 - 2 * (x[i, j] - x[i + 1, j]) * (
                             x[i + 1, j + 1] - x[i + 1, j]) * G12 + ((
                                                                             x[i + 1, j + 1] - x[i + 1, j]) ** 2) * G11
@@ -1227,65 +1276,63 @@ def functional2(grid_omega, grid_canon, grid_shape):
                     Rxx[i + 1, j + 1] += Fxx / weight
                     Ryy[i + 1, j + 1] += Fyy / weight
 
-    if flag != 1:
-        print("aproxim: ", aproximation/((nx-1)*(ny-1)*8))
     return aproximation/((nx-1)*(ny-1)*8), Rx, Ry, Rxx, Ryy, Rxy, flag
 
 
-def mimimize(omega, canon, grid_shape, tau, eps, count=0, stop_flag=[False]):
-    iter_flag = 0
-    nx, ny = grid_shape
-    Fk, Rx, Ry, Rxx, Ryy, Rxy, flag = functional2(omega, canon, grid_shape)
-    x_old = omega[0]
-    y_old = omega[1]
-    maxdif = 0.0
+def mimimize(omega, canon, grid_shape, tau, eps, stop_flag=[False]):
 
-    if stop_flag[0]:
-        print("Алгоритм прерван пользователем")
-        iter_flag = 1
-        return np.array([x_old, y_old]), iter_flag, tau
+    maxdif = 99999999
+    x, y = omega
+    value = 0
+    iter_count = 0
+    while maxdif > eps:
+        if stop_flag[0]:
+            print("Алгоритм прерван пользователем")
+            break
 
-    if count >= 996:
-        print("count limit")
-        print("value = ", Fk)
-        return np.array([x_old, y_old]), iter_flag, tau
+        Fk, Rx, Ry, Rxx, Ryy, Rxy, _ = functional2((x, y), canon, grid_shape)
+        if iter_count == 0:
+            print("start value = ", Fk)
+        value = Fk
 
-    x_new = x_old.copy()
-    y_new = y_old.copy()
+        # Вычисляем только внутренние точки
+        denom = Rxx[1:-1, 1:-1] * Ryy[1:-1, 1:-1] - Rxy[1:-1, 1:-1] ** 2
+        denom[denom == 0] = 1e-12
 
-    for i in range(1, nx - 1):
-        for j in range(1, ny - 1):
-            x_new[i, j] = x_old[i, j] - tau * ((Rx[i, j] * Ryy[i, j] - Ry[i, j] * Rxy[i, j]) / (Rxx[i, j] * Ryy[i, j] - Rxy[i, j] ** 2))
-            y_new[i, j] = y_old[i, j] - tau * ((Ry[i, j] * Rxx[i, j] - Rx[i, j] * Rxy[i, j]) / (Rxx[i, j] * Ryy[i, j] - Rxy[i, j] ** 2))
-            if abs(x_new[i, j] - x_old[i, j]) > maxdif:
-                maxdif = abs(x_new[i, j] - x_old[i, j])
-            if abs(y_new[i, j] - y_old[i, j]) > maxdif:
-                maxdif = abs(y_new[i, j] - y_old[i, j])
+        dx = -tau * (Rx[1:-1, 1:-1] * Ryy[1:-1, 1:-1] - Ry[1:-1, 1:-1] * Rxy[1:-1, 1:-1]) / denom
+        dy = -tau * (Ry[1:-1, 1:-1] * Rxx[1:-1, 1:-1] - Rx[1:-1, 1:-1] * Rxy[1:-1, 1:-1]) / denom
 
-    if stop_flag[0]:
-        print("Алгоритм прерван пользователем")
-        iter_flag = 1
-        return np.array([x_old, y_old]), iter_flag, tau
+        # Создаём новые массивы, копируя старые
+        x_new = x.copy()
+        y_new = y.copy()
 
-    new_grid = np.array([x_new, y_new])
-    temp_func = functional2(new_grid, canon, (nx, ny))
-    flag = temp_func[6]
-    value = temp_func[0]
+        # Обновляем только внутренние элементы
+        x_new[1:-1, 1:-1] += dx
+        y_new[1:-1, 1:-1] += dy
 
-    if flag == 1 or (value > Fk):
-        tau_new = tau * 0.5
-        count += 1
-        if value > Fk:
-            print("minus value")
-        return mimimize(np.array([x_old, y_old]), canon, grid_shape, tau_new, eps, count, stop_flag)
-    else:
-        if maxdif <= eps:
-            print("value = ", value)
-            iter_flag = 1
-            return np.array([x_old, y_old]), iter_flag, tau
-        else:
-            count += 1
-            return mimimize(np.array([x_new, y_new]), canon, grid_shape, tau, eps, count, stop_flag)
+        maxdif = max(np.max(np.abs(dx)), np.max(np.abs(dy)))
+        print("maxdif is now at: ", maxdif)
+
+        if stop_flag[0]:
+            print("Алгоритм прерван пользователем")
+            break
+
+        new_grid = (x_new, y_new)
+        Fk_new, *_, flag_new = functional2(new_grid, canon, grid_shape)
+
+        if flag_new == 1 or Fk_new > Fk:
+            tau *= 0.5
+            print("tau went down")
+            if Fk_new > Fk:
+                print("minus value")
+            continue
+        iter_count += 1
+        x, y = x_new, y_new
+
+    print("func value = ", value)
+    print("count of iterations = ", iter_count)
+
+    return np.array([x, y]), tau
 
 
 def plot_grid(grid, nx, ny, title):
@@ -1531,21 +1578,21 @@ def implicit_transfinite_better(discr, nod=None):
 
 node2 = [11, 11, 0.6, 0.5]
 
-nx = ny = 55    # -----------------------------------------------------------
+nx = ny = 55    # ------------------------------------------------------------------------------------------------------
 # canon_grid = implicit_transfinite_interpol(nx, sq_t1, sq_b1, sq_l1, sq_r1)
 # canon_grid, count = winslow_without_implicit(NX, Xyt, Xyb, Xyr, Xyl, treshhold)
 # canon_grid = transfinite_interpol(nx, Xyt, Xyb, Xyl, Xyr)
 # canon_grid = implicit_transfinite_interpol(nx, chevt, chevb, chevr, chevl)
 # canon_grid = implicit_transfinite_interpol(nx, myt, myb, myr, myl)
-canon_grid = implicit_transfinite_interpol(nx, sq_t1, sq_b1, sq_l1, sq_r1)
+canon_grid = implicit_transfinite_interpol(nx, sq_t2, sq_b2, sq_l2, sq_r2)
 
 # start
 coef_temp = 1
-dc = 0.035
+dc = 0.04
 
 for i in range(nx//2 + coef_temp, nx-1):    # низ
     for j in range(ny):
-        if i != 0 and i != ny-1 and elem_sdvig < j < ny - (elem_sdvig+1):
+        if i != 0 and i != ny-1 and elem_sdvig-1 < j < ny - elem_sdvig:
             dense_coef = 1
             razn = abs(canon_grid[0][i][j] - canon_grid[0][i][j]**(dense_coef+dc*coef_temp))
             canon_grid[0][i][j] = canon_grid[0][i][j]**(dense_coef+dc*coef_temp)
@@ -1608,10 +1655,31 @@ canon_grid[1] = np.flip(canon_grid[1], axis=0)
 canon_grid[0] = np.transpose(canon_grid[0])
 canon_grid[1] = np.transpose(canon_grid[1])
 
-canon_grid, count = winslow(nx, canon_grid[0], canon_grid[1], treshhold, 1)
+canon_grid, count = winslow(nx, canon_grid[0], canon_grid[1], treshhold, 12)
 
 xx, yy = canon_grid[0], canon_grid[1]
 canon_grid = (xx, yy)
+
+cells_x = np.empty((nx - 1, ny - 1), dtype=object)
+cells_y = np.empty((nx - 1, ny - 1), dtype=object)
+for i in range(nx - 1):
+    for j in range(ny - 1):
+        cells_x[i, j] = np.zeros((2, 2))
+        cells_y[i, j] = np.zeros((2, 2))
+
+for i in range(nx - 1):
+    for j in range(ny - 1):
+        cx = cells_x[i, j]
+        cy = cells_y[i, j]
+        cx[0, 0] = canon_grid[0][i, j]
+        cy[0, 0] = canon_grid[1][i, j]
+        cx[1, 1] = canon_grid[0][i + 1, j + 1]
+        cy[1, 1] = canon_grid[1][i + 1, j + 1]
+        cx[1, 0] = canon_grid[0][i + 1, j]
+        cy[1, 0] = canon_grid[1][i + 1, j]
+        cx[0, 1] = canon_grid[0][i, j + 1]
+        cy[0, 1] = canon_grid[1][i, j + 1]
+cells = np.array([cells_x, cells_y])
 
 """
 for i in range(nx-1, -1, -1):
@@ -1632,7 +1700,7 @@ print("y ", yy[0, 0], yy[nx-1, ny-1])"""
 # omega_grid2, count = winslow_without_implicit(nx, Xyt, Xyb, Xyr, Xyl, treshhold)
 # omega_grid2 = implicit_transfinite_interpol(nx, myt, myb, myr, myl)
 # omega_grid2 = transfinite_interpol(nx, Xyt, Xyb, Xyl, Xyr)
-# omega_grid2 = implicit_transfinite_new(nx)  # vot eto ne na diplom
+# omega_grid2 = implicit_transfinite_new(nx)
 omega_grid2 = implicit_transfinite_better(nx)  # vot eto na diplom
 # omega_grid2 = implicit_transfinite_interpol(nx, chevt, chevb, chevr, chevl)
 # omega_grid2 = transfinite_interpol(20, horst, horsb, horsr, horsl)
@@ -1682,18 +1750,9 @@ def stop_optimization():
 # Запуск "слушателя кнопки" в отдельном потоке
 threading.Thread(target=stop_optimization).start()
 
-while global_iter_flag != 1:
-    if while_iter == 0:
-        omega_grid2, flag, iter_tau = mimimize(omega_grid2, canon_grid, (nx, ny), 10, 1e-5, stop_flag=stop_flag)
-        global_iter_flag = flag
-        new_tau = iter_tau
-        while_iter += 1
-    else:
-        omega_grid2, flag, iter_tau = mimimize(omega_grid2, canon_grid, (nx, ny), new_tau, 1e-5, stop_flag=stop_flag)
-        global_iter_flag = flag
-        new_tau = iter_tau
-# omega_grid2, count = winslow(nx, omega_grid2[0], omega_grid2[1], treshhold, 8)
+omega_grid2, flag = mimimize(omega_grid2, cells, (nx, ny), 5, 1e-5, stop_flag=stop_flag)
 
+# omega_grid2, count = winslow(nx, omega_grid2[0], omega_grid2[1], treshhold, 8)
 
 new_grid = omega_grid2
 plt.plot(new_grid[0], new_grid[1], c="b", linewidth=1)
