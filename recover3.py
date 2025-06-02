@@ -1294,7 +1294,7 @@ def mimimize(omega, canon, grid_shape, tau, eps, stop_flag=[False]):
         if iter_count == 0:
             print("start value = ", Fk)
         value = Fk
-
+        iter_count += 1
         # Вычисляем только внутренние точки
         denom = Rxx[1:-1, 1:-1] * Ryy[1:-1, 1:-1] - Rxy[1:-1, 1:-1] ** 2
         denom[denom == 0] = 1e-12
@@ -1326,7 +1326,6 @@ def mimimize(omega, canon, grid_shape, tau, eps, stop_flag=[False]):
             if Fk_new > Fk:
                 print("minus value")
             continue
-        iter_count += 1
         x, y = x_new, y_new
 
     print("func value = ", value)
@@ -1588,7 +1587,7 @@ canon_grid = implicit_transfinite_interpol(nx, sq_t2, sq_b2, sq_l2, sq_r2)
 
 # start
 coef_temp = 1
-dc = 0.04
+dc = 0.06
 
 for i in range(nx//2 + coef_temp, nx-1):    # низ
     for j in range(ny):
@@ -1596,7 +1595,7 @@ for i in range(nx//2 + coef_temp, nx-1):    # низ
             dense_coef = 1
             razn = abs(canon_grid[0][i][j] - canon_grid[0][i][j]**(dense_coef+dc*coef_temp))
             canon_grid[0][i][j] = canon_grid[0][i][j]**(dense_coef+dc*coef_temp)
-            canon_grid[0][nx//2 - coef_temp][j] += razn
+            canon_grid[0][nx//2 - coef_temp][j] += razn*1.07
     coef_temp += 1
 
 """ind = 1
@@ -1655,10 +1654,130 @@ canon_grid[1] = np.flip(canon_grid[1], axis=0)
 canon_grid[0] = np.transpose(canon_grid[0])
 canon_grid[1] = np.transpose(canon_grid[1])
 
-canon_grid, count = winslow(nx, canon_grid[0], canon_grid[1], treshhold, 12)
+canon_grid, count = winslow(nx, canon_grid[0], canon_grid[1], treshhold, 25)
 
 xx, yy = canon_grid[0], canon_grid[1]
 canon_grid = (xx, yy)
+
+# ПЕРЕХОД ОТ СЕТКИ К ЯЧЕЙКАМ ------------------------------------------------------------------------------------------
+
+
+def approximate_quad_to_rectangle(x1, y1, x2, y2, x3, y3, x4, y4):
+    # Точки четырёхугольника (в порядке обхода)
+    quad_points = np.array([[x1, y1], [x2, y2], [x3, y3], [x4, y4]])
+
+    # 1. Вычисляем площадь четырёхугольника (формула шнурования)
+    def compute_polygon_area(points):
+        x = points[:, 0]
+        y = points[:, 1]
+        return 0.5 * np.abs(np.sum(x * np.roll(y, -1) - np.roll(x, -1) * y))
+
+    area = compute_polygon_area(quad_points)
+
+    # 2. Находим центроид (среднее координат)
+    centroid = np.mean(quad_points, axis=0)
+
+    # 3. Вычисляем габариты (ширину и высоту) четырёхугольника
+    min_x, max_x = np.min(quad_points[:, 0]), np.max(quad_points[:, 0])
+    min_y, max_y = np.min(quad_points[:, 1]), np.max(quad_points[:, 1])
+    width = max_x - min_x
+    height = max_y - min_y
+
+    # 4. Корректируем стороны прямоугольника, сохраняя площадь и пропорции
+    aspect_ratio = width / height if height != 0 else 1.0  # избегаем деления на 0
+    new_height = np.sqrt(area / aspect_ratio)
+    new_width = area / new_height
+
+    # 5. Строим прямоугольник с центром в центроиде
+    rect_half_width = new_width / 2
+    rect_half_height = new_height / 2
+
+    # Координаты вершин прямоугольника
+    rect_x1 = centroid[0] - rect_half_width
+    rect_y1 = centroid[1] - rect_half_height
+
+    rect_x2 = centroid[0] + rect_half_width
+    rect_y2 = centroid[1] - rect_half_height
+
+    rect_x3 = centroid[0] + rect_half_width
+    rect_y3 = centroid[1] + rect_half_height
+
+    rect_x4 = centroid[0] - rect_half_width
+    rect_y4 = centroid[1] + rect_half_height
+
+    # Возвращаем 8 переменных + площадь + центроид
+    return (
+        rect_x1, rect_y1, rect_x2, rect_y2, rect_x3, rect_y3, rect_x4, rect_y4
+    )
+
+
+def approximate_quad_by_pca(x1, y1, x2, y2, x3, y3, x4, y4):
+    # Точки четырёхугольника
+    points = np.array([[x1, y1], [x2, y2], [x3, y3], [x4, y4]])
+
+    # 1. Применяем PCA для определения главных осей
+    pca = PCA(n_components=2)
+    pca.fit(points)
+
+    # Главные компоненты (направления)
+    pc1 = pca.components_[0]  # первая главная компонента (наибольшая дисперсия)
+    pc2 = pca.components_[1]  # вторая главная компонента
+
+    # Центроид (среднее точек)
+    centroid = np.mean(points, axis=0)
+
+    # 2. Проецируем точки на главные оси, чтобы определить "размеры"
+    projected = pca.transform(points)
+    min_pc1, max_pc1 = np.min(projected[:, 0]), np.max(projected[:, 0])
+    min_pc2, max_pc2 = np.min(projected[:, 1]), np.max(projected[:, 1])
+
+    # Размеры вдоль главных осей
+    length = max_pc1 - min_pc1  # "длина" (по первой компоненте)
+    width = max_pc2 - min_pc2  # "ширина" (по второй компоненте)
+
+    # 3. Угол поворота прямоугольника (наклон первой компоненты)
+    angle = np.arctan2(pc1[1], pc1[0])
+
+    # 4. Строим прямоугольник в новой системе координат
+    # Углы прямоугольника (до поворота)
+    half_length = length / 2
+    half_width = width / 2
+    rect_local = np.array([
+        [-half_length, -half_width],
+        [half_length, -half_width],
+        [half_length, half_width],
+        [-half_length, half_width]
+    ])
+
+    # Поворачиваем прямоугольник обратно в исходную систему
+    rotation_matrix = np.array([
+        [np.cos(angle), np.sin(angle)],
+        [-np.sin(angle), np.cos(angle)]
+    ])
+    rect_rotated = np.dot(rect_local, rotation_matrix)
+
+    # Сдвигаем к центроиду
+    rect_final = rect_rotated + centroid
+
+    # Разбиваем координаты на отдельные переменные
+    rect_x1, rect_y1 = rect_final[0]
+    rect_x2, rect_y2 = rect_final[1]
+    rect_x3, rect_y3 = rect_final[2]
+    rect_x4, rect_y4 = rect_final[3]
+
+    # Площадь исходного четырёхугольника (для сравнения)
+    def compute_area(points):
+        x = points[:, 0]
+        y = points[:, 1]
+        return 0.5 * np.abs(np.sum(x * np.roll(y, -1) - np.roll(x, -1) * y))
+
+    original_area = compute_area(points)
+    new_area = length * width  # площадь прямоугольника
+
+    return (
+        rect_x1, rect_y1, rect_x2, rect_y2, rect_x3, rect_y3, rect_x4, rect_y4, original_area, new_area
+    )
+
 
 cells_x = np.empty((nx - 1, ny - 1), dtype=object)
 cells_y = np.empty((nx - 1, ny - 1), dtype=object)
@@ -1679,6 +1798,16 @@ for i in range(nx - 1):
         cy[1, 0] = canon_grid[1][i + 1, j]
         cx[0, 1] = canon_grid[0][i, j + 1]
         cy[0, 1] = canon_grid[1][i, j + 1]
+        # (cx[0, 0], cy[0, 0], cx[0, 1], cy[0, 1], cx[1, 1], cy[1, 1], cx[1, 0], cy[1, 0], new_ar, orig_ar) = \
+        (x1, y1, x2, y2, x3, y3, x4, y4, new_ar, orig_ar) = \
+            approximate_quad_by_pca(cx[0, 0], cy[0, 0], cx[0, 1], cy[0, 1], cx[1, 1], cy[1, 1], cx[1, 0], cy[1, 0])
+        if abs(new_ar - orig_ar) < 1e-9:
+            (cx[0, 0], cy[0, 0], cx[0, 1], cy[0, 1], cx[1, 1], cy[1, 1], cx[1, 0], cy[1, 0]) = \
+                (x1, y1, x2, y2, x3, y3, x4, y4)
+        else:
+            cx[0, 0], cy[0, 0], cx[0, 1], cy[0, 1], cx[1, 1], cy[1, 1], cx[1, 0], cy[1, 0] =\
+                approximate_quad_to_rectangle(
+                    cx[0, 0], cy[0, 0], cx[0, 1], cy[0, 1], cx[1, 1], cy[1, 1], cx[1, 0], cy[1, 0])
 cells = np.array([cells_x, cells_y])
 
 """
@@ -1750,7 +1879,7 @@ def stop_optimization():
 # Запуск "слушателя кнопки" в отдельном потоке
 threading.Thread(target=stop_optimization).start()
 
-omega_grid2, flag = mimimize(omega_grid2, cells, (nx, ny), 5, 1e-5, stop_flag=stop_flag)
+omega_grid2, flag = mimimize(omega_grid2, cells, (nx, ny), 5, 1e-6, stop_flag=stop_flag)
 
 # omega_grid2, count = winslow(nx, omega_grid2[0], omega_grid2[1], treshhold, 8)
 
