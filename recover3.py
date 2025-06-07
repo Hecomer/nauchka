@@ -2,11 +2,10 @@ import numpy as np
 from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
 import math
-from scipy.optimize import minimize
 import sys
 import threading
-import time
 from sklearn.decomposition import PCA
+
 sys.setrecursionlimit(10000)
 
 
@@ -18,13 +17,13 @@ def find_intersection(f1, f2):
 
 def Xnewt(s):
     x = s
-    y = s**2 + 3
+    y = s ** 2 + 3
     return np.array([x, y])
 
 
 def Xnewb(s):
     x = s
-    y = s**2 - 3
+    y = s ** 2 - 3
     return np.array([x, y])
 
 
@@ -53,14 +52,14 @@ def Xyl(s):
 
 
 def Xyr(s):
-    x = 1 + 2 * s - 2 * s**1.5
+    x = 1 + 2 * s - 2 * s ** 1.5
     y = s
     return np.array([x, y])
 
 
 def Xyt(s):
     x = s
-    y = 1 - 3 * s + 3 * s**2
+    y = 1 - 3 * s + 3 * s ** 2
     return np.array([x, y])
 
 
@@ -75,12 +74,12 @@ def sq_b2(s):
 
 
 def sq_l2(s):
-    y = 1000000*s
+    y = 1000000 * s
     return y
 
 
 def sq_r2(s):
-    y = 1000000 - 1000000*s
+    y = 1000000 - 1000000 * s
     return y
 
 
@@ -95,12 +94,12 @@ def sq_b1(s):
 
 
 def sq_l1(s):
-    y = 1000000*s
+    y = 1000000 * s
     return y
 
 
 def sq_r1(s):
-    y = 1000000 - 1000000*s
+    y = 1000000 - 1000000 * s
     return y
 
 
@@ -115,12 +114,12 @@ def sq_b(s):
 
 
 def sq_l(s):
-    y = 1000000*s
+    y = 1000000 * s
     return y
 
 
 def sq_r(s):
-    y = 2000000 - 1000000*s
+    y = 2000000 - 1000000 * s
     return y
 
 
@@ -181,6 +180,7 @@ def chevb(x):
         y = x - 1
     return y
 
+
 def myl(x):
     return 10000000 * x + 10000000
 
@@ -188,12 +188,13 @@ def myl(x):
 def myr(x):
     return 100000 - 100000 * x
 
+
 def myt(x):
-    return (2*x)**2 + 4
+    return (2 * x) ** 2 + 4
 
 
 def myb(x):
-    return (2*x)**2
+    return (2 * x) ** 2
 
 
 def Myl(s):
@@ -212,14 +213,14 @@ def Myr(s):
 
 def Myt(s):
     x = s
-    y = x**2 + 4
+    y = x ** 2 + 4
     xy = np.array([x, y])
     return xy
 
 
 def Myb(s):
     x = s
-    y = x**2
+    y = x ** 2
     xy = np.array([x, y])
     return xy
 
@@ -239,15 +240,15 @@ def horsr(s):
 
 
 def horst(s):
-    x = math.sin(math.pi/2*(1-2*s))
-    y = math.cos(math.pi/2*(1-2*s))
+    x = math.sin(math.pi / 2 * (1 - 2 * s))
+    y = math.cos(math.pi / 2 * (1 - 2 * s))
     xy = np.array([x, y])
     return xy
 
 
 def horsb(s):
-    x = math.sin(math.pi/2*(1-2*s))
-    y = math.cos(math.pi/2*(1-2*s))
+    x = math.sin(math.pi / 2 * (1 - 2 * s))
+    y = math.cos(math.pi / 2 * (1 - 2 * s))
     xy = np.array([x, y])
     return xy
 
@@ -265,7 +266,7 @@ def implicit_transfinite_interpol(discr, Xt, Xb, Xr, Xl, nod=None):
     #   print(intersection_bl)
     #   print(intersection_tl)
 
-    x_discr_t = np.linspace(intersection_tl[0], intersection_tr[0], discr)    # дискретизация границ по x
+    x_discr_t = np.linspace(intersection_tl[0], intersection_tr[0], discr)  # дискретизация границ по x
     x_discr_b = np.linspace(intersection_bl[0], intersection_br[0], discr)
     x_discr_l = np.linspace(intersection_bl[0], intersection_tl[0], discr)
     x_discr_r = np.linspace(intersection_br[0], intersection_tr[0], discr)
@@ -299,69 +300,69 @@ def implicit_transfinite_interpol(discr, Xt, Xb, Xr, Xl, nod=None):
     r_y_val,
     l_y_val, sep="\n"+"\n")"""
 
-    X = np.zeros((m*n, m*n))  # матрица (позиция иксов исходя из дискретизации; иксы на этой позиции)
-    Y = np.zeros((m*m, m*n))
-    bx = np.zeros(m*n)
-    by = np.zeros(m*n)
+    X = np.zeros((m * n, m * n))  # матрица (позиция иксов исходя из дискретизации; иксы на этой позиции)
+    Y = np.zeros((m * m, m * n))
+    bx = np.zeros(m * n)
+    by = np.zeros(m * n)
     for i in range(discr):
         for j in range(discr):
 
-            gidx = i*discr + j
+            gidx = i * discr + j
 
             if j == 0:
-                X[gidx, i*discr + j] = 1.0
+                X[gidx, i * discr + j] = 1.0
                 bx[gidx] = b_x_val[i]
             elif j == discr - 1:
-                X[gidx, i*discr + j] = 1.0
+                X[gidx, i * discr + j] = 1.0
                 bx[gidx] = t_x_val[i]
             elif i == 0:
-                X[gidx, i*discr + j] = 1.0
+                X[gidx, i * discr + j] = 1.0
                 bx[gidx] = l_x_val[j]
             elif i == discr - 1:
-                X[gidx, i*discr + j] = 1.0
+                X[gidx, i * discr + j] = 1.0
                 bx[gidx] = r_x_val[j]
-            elif nod != None and i == nod[0]-1 and j == nod[1]-1:
+            elif nod != None and i == nod[0] - 1 and j == nod[1] - 1:
                 X[gidx, i * discr + j] = 1.0
                 bx[gidx] = nod[2]
             else:
                 X[gidx, i * discr + j] = 1.0
-                X[gidx, (i-1) * discr + j] = -1/2
-                X[gidx, (i+1) * discr + j] = -1/2
-                X[gidx, i * discr + (j-1)] = -1/2
-                X[gidx, i * discr + (j+1)] = -1/2
-                X[gidx, (i+1) * discr + (j+1)] = 1/4
-                X[gidx, (i+1) * discr + (j-1)] = 1/4
-                X[gidx, (i-1) * discr + (j+1)] = 1/4
-                X[gidx, (i-1) * discr + (j-1)] = 1/4
+                X[gidx, (i - 1) * discr + j] = -1 / 2
+                X[gidx, (i + 1) * discr + j] = -1 / 2
+                X[gidx, i * discr + (j - 1)] = -1 / 2
+                X[gidx, i * discr + (j + 1)] = -1 / 2
+                X[gidx, (i + 1) * discr + (j + 1)] = 1 / 4
+                X[gidx, (i + 1) * discr + (j - 1)] = 1 / 4
+                X[gidx, (i - 1) * discr + (j + 1)] = 1 / 4
+                X[gidx, (i - 1) * discr + (j - 1)] = 1 / 4
                 bx[gidx] = 0.0
     for i in range(discr):
         for j in range(discr):
-            gidx = i*discr + j
+            gidx = i * discr + j
             if j == 0:
-                Y[gidx, i*discr + j] = 1.0
+                Y[gidx, i * discr + j] = 1.0
                 by[gidx] = b_y_val[i]
             elif j == discr - 1:
-                Y[gidx, i*discr + j] = 1.0
+                Y[gidx, i * discr + j] = 1.0
                 by[gidx] = t_y_val[i]
             elif i == 0:
-                Y[gidx, i*discr + j] = 1.0
+                Y[gidx, i * discr + j] = 1.0
                 by[gidx] = l_y_val[j]
             elif i == discr - 1:
-                Y[gidx, i*discr + j] = 1.0
+                Y[gidx, i * discr + j] = 1.0
                 by[gidx] = r_y_val[j]
-            elif nod != None and i == nod[1]-1 and j == nod[0]-1:
+            elif nod != None and i == nod[1] - 1 and j == nod[0] - 1:
                 Y[gidx, i * discr + j] = 1.0
                 by[gidx] = nod[3]
             else:
                 Y[gidx, i * discr + j] = 1.0
-                Y[gidx, (i-1) * discr + j] = -1/2
-                Y[gidx, (i+1) * discr + j] = -1/2
-                Y[gidx, i * discr + (j-1)] = -1/2
-                Y[gidx, i * discr + (j+1)] = -1/2
-                Y[gidx, (i+1) * discr + (j+1)] = 1/4
-                Y[gidx, (i+1) * discr + (j-1)] = 1/4
-                Y[gidx, (i-1) * discr + (j+1)] = 1/4
-                Y[gidx, (i-1) * discr + (j-1)] = 1/4
+                Y[gidx, (i - 1) * discr + j] = -1 / 2
+                Y[gidx, (i + 1) * discr + j] = -1 / 2
+                Y[gidx, i * discr + (j - 1)] = -1 / 2
+                Y[gidx, i * discr + (j + 1)] = -1 / 2
+                Y[gidx, (i + 1) * discr + (j + 1)] = 1 / 4
+                Y[gidx, (i + 1) * discr + (j - 1)] = 1 / 4
+                Y[gidx, (i - 1) * discr + (j + 1)] = 1 / 4
+                Y[gidx, (i - 1) * discr + (j - 1)] = 1 / 4
                 by[gidx] = 0.0
     X_res = (np.linalg.solve(X, bx)).reshape((n, m))
     Y_res = (np.linalg.solve(Y, by)).reshape((n, m))
@@ -398,16 +399,16 @@ def thomaxsolver(a, b, c, d):
     n = len(d)
     x = np.zeros(n)
     g_mod = [c[0] / b[0]]
-    for j in range(1, n-1):
-        gg = c[j] / (b[j] - g_mod[j-1]*a[j])
+    for j in range(1, n - 1):
+        gg = c[j] / (b[j] - g_mod[j - 1] * a[j])
         g_mod.append(gg)
     d_mod = [d[0] / b[0]]
     for j in range(1, n):
-        dd = (d[j] - d_mod[j-1]*a[j]) / (b[j] - g_mod[j-1]*a[j])
+        dd = (d[j] - d_mod[j - 1] * a[j]) / (b[j] - g_mod[j - 1] * a[j])
         d_mod.append(dd)
-    x[n-1] = d_mod[-1]
-    for j in range(n-2, -1, -1):
-        x[j] = d_mod[j] - g_mod[j]*x[j+1]
+    x[n - 1] = d_mod[-1]
+    for j in range(n - 2, -1, -1):
+        x[j] = d_mod[j] - g_mod[j] * x[j + 1]
     return x
 
 
@@ -494,8 +495,8 @@ def compute_max_diff(phi_new, phi_old):
     # Инициализируем список разниц
     maxlist = []
     # Проходим по всем элементам массива, исключая границы
-    for j in range(1, height-1):
-        for i in range(1, length-1):
+    for j in range(1, height - 1):
+        for i in range(1, length - 1):
             phidiff = np.abs(phi_new[j, i] - phi_old[j, i])
             maxlist.append(phidiff)
     maxnum = max(maxlist)
@@ -664,15 +665,15 @@ def functional2(grid_omega, cells, grid_shape):
                 if k == 0:  # lb corner perf; k = i,j; k+1 = i,j+1; k-1 = i+1,j
                     G11 = ((X2 - X1) ** 2) + ((Y2 - Y1) ** 2)
                     G12 = (X2 - X1) * (X4 - X1) + (Y2 - Y1) * (
-                                Y4 - Y1)
+                            Y4 - Y1)
                     G22 = (X4 - X1) ** 2 + (Y4 - Y1) ** 2
                     Jk = (x[i, j + 1] - x[i, j]) * (y[i + 1, j] - y[i, j]) - (x[i + 1, j] - x[i, j]) * (
-                                y[i, j + 1] - y[i, j])
+                            y[i, j + 1] - y[i, j])
                     if Jk <= 0:
                         print("1: flag")
                         flag = 1
                     Dk = (X2 - X1) * (Y4 - Y1) - (X4 - X1) * (
-                                Y2 - Y1)
+                            Y2 - Y1)
                     alpha = ((x[i, j + 1] - x[i, j]) ** 2) * G22 - 2 * (x[i, j + 1] - x[i, j]) * (
                             x[i + 1, j] - x[i, j]) * G12 + ((
                                                                     x[i + 1, j] - x[i, j]) ** 2) * G11
@@ -694,37 +695,37 @@ def functional2(grid_omega, cells, grid_shape):
                     y3 = y[i + 1, j]
 
                     # xk : x[i, j]  done
-                    Fx = (-(G22 * ((x1 - x2)**2 + (y1 - y2)**2) -
+                    Fx = (-(G22 * ((x1 - x2) ** 2 + (y1 - y2) ** 2) -
                             2 * G12 * ((x1 - x2) * (x1 - x3) + (y1 - y2) * (y1 - y3)) +
-                                G11 * ((x1 - x3)**2 + (y1 - y3)**2)) * (y2 - y3) +
-                            2 * (G22 * (x1 - x2) + G11 * (x1 - x3) +
-                                    G12 * (-2 * x1 + x2 + x3)) *
-                            (x3 * (y1 - y2) + x1 * (y2 - y3) + x2 * (-y1 + y3))) / \
-                                (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**2)
+                            G11 * ((x1 - x3) ** 2 + (y1 - y3) ** 2)) * (y2 - y3) +
+                          2 * (G22 * (x1 - x2) + G11 * (x1 - x3) +
+                               G12 * (-2 * x1 + x2 + x3)) *
+                          (x3 * (y1 - y2) + x1 * (y2 - y3) + x2 * (-y1 + y3))) / \
+                         (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 2)
                     Fy = -(
-                        ((-x2 + x3) * (G22 * ((x1 - x2)**2 + (y1 - y2)**2) -
-                                       2 * G12 * ((x1 - x2) * (x1 - x3) + (y1 - y2) * (y1 - y3)) +
-                                       G11 * ((x1 - x3)**2 + (y1 - y3)**2)) +
-                         2 * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) *
-                           (G22 * (y1 - y2) + G11 * (y1 - y3) + G12 * (-2 * y1 + y2 + y3)))
-                        / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**2)
+                            ((-x2 + x3) * (G22 * ((x1 - x2) ** 2 + (y1 - y2) ** 2) -
+                                           2 * G12 * ((x1 - x2) * (x1 - x3) + (y1 - y2) * (y1 - y3)) +
+                                           G11 * ((x1 - x3) ** 2 + (y1 - y3) ** 2)) +
+                             2 * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) *
+                             (G22 * (y1 - y2) + G11 * (y1 - y3) + G12 * (-2 * y1 + y2 + y3)))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 2)
                     )
                     Fxx = -(
-                        2 * ((x2 - x3)**2 + (y2 - y3)**2) *
-                        (G11 * (y1 - y3)**2 + (y1 - y2) * (G22 * (y1 - y2) + 2 * G12 * (-y1 + y3)))
-                        / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**3)
+                            2 * ((x2 - x3) ** 2 + (y2 - y3) ** 2) *
+                            (G11 * (y1 - y3) ** 2 + (y1 - y2) * (G22 * (y1 - y2) + 2 * G12 * (-y1 + y3)))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
                     )
                     Fyy = -(
-                        2 * (G11 * (x1 - x3)**2 + (x1 - x2) * (G22 * (x1 - x2) + 2 * G12 * (-x1 + x3))) *
-                        ((x2 - x3)**2 + (y2 - y3)**2) /
-                        (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**3)
+                            2 * (G11 * (x1 - x3) ** 2 + (x1 - x2) * (G22 * (x1 - x2) + 2 * G12 * (-x1 + x3))) *
+                            ((x2 - x3) ** 2 + (y2 - y3) ** 2) /
+                            (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
                     )
                     Fxy = (
-                        2 * ((x2 - x3)**2 + (y2 - y3)**2) *
-                        (G22 * (x1 - x2) * (y1 - y2) +
-                         G11 * (x1 - x3) * (y1 - y3) +
-                         G12 * (x2 * y1 + x3 * y1 - x3 * y2 - x2 * y3 + x1 * (-2 * y1 + y2 + y3)))
-                        / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**3)
+                            2 * ((x2 - x3) ** 2 + (y2 - y3) ** 2) *
+                            (G22 * (x1 - x2) * (y1 - y2) +
+                             G11 * (x1 - x3) * (y1 - y3) +
+                             G12 * (x2 * y1 + x3 * y1 - x3 * y2 - x2 * y3 + x1 * (-2 * y1 + y2 + y3)))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
                     )
                     Rx[i, j] += Fx / weight
                     Rxy[i, j] += Fxy / weight
@@ -734,39 +735,39 @@ def functional2(grid_omega, cells, grid_shape):
 
                     # xk+1 : x[i, j + 1] done
                     Fx = (
-                        (-2 * G12 * (y1 - y2) * ((x1 - x3)**2 + (y1 - y3)**2) +
-                         G11 * ((x1 - x3)**2 + (y1 - y3)**2) * (y1 - y3) +
-                         G22 * (2 * x2 * x3 * (y1 - y2) +
-                                2 * x1 * (x3 * (-y1 + y2) + x2 * (y2 - y3)) +
-                                (y1 - y2)**2 * (y1 - y3) +
-                                x2**2 * (-y1 + y3) +
-                                x1**2 * (y1 - 2 * y2 + y3))
-                        ) / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**2)
+                            (-2 * G12 * (y1 - y2) * ((x1 - x3) ** 2 + (y1 - y3) ** 2) +
+                             G11 * ((x1 - x3) ** 2 + (y1 - y3) ** 2) * (y1 - y3) +
+                             G22 * (2 * x2 * x3 * (y1 - y2) +
+                                    2 * x1 * (x3 * (-y1 + y2) + x2 * (y2 - y3)) +
+                                    (y1 - y2) ** 2 * (y1 - y3) +
+                                    x2 ** 2 * (-y1 + y3) +
+                                    x1 ** 2 * (y1 - 2 * y2 + y3))
+                             ) / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 2)
                     )
                     Fy = result = -(
-                        (G22 * (x1**3 - x2**2 * x3 - x1**2 * (2 * x2 + x3) + x3 * (y1 - y2)**2 +
-                                x1 * (x2**2 + 2 * x2 * x3 + (y1 - y2) * (y1 + y2 - 2 * y3)) -
-                                2 * x2 * (y1 - y2) * (y1 - y3)) -
-                         2 * G12 * (x1 - x2) * ((x1 - x3)**2 + (y1 - y3)**2) +
-                         G11 * (x1 - x3) * ((x1 - x3)**2 + (y1 - y3)**2))
-                        / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**2)
+                            (G22 * (x1 ** 3 - x2 ** 2 * x3 - x1 ** 2 * (2 * x2 + x3) + x3 * (y1 - y2) ** 2 +
+                                    x1 * (x2 ** 2 + 2 * x2 * x3 + (y1 - y2) * (y1 + y2 - 2 * y3)) -
+                                    2 * x2 * (y1 - y2) * (y1 - y3)) -
+                             2 * G12 * (x1 - x2) * ((x1 - x3) ** 2 + (y1 - y3) ** 2) +
+                             G11 * (x1 - x3) * ((x1 - x3) ** 2 + (y1 - y3) ** 2))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 2)
                     )
                     Fxx = -(
-                        2 * ((x1 - x3)**2 + (y1 - y3)**2) *
-                        (G11 * (y1 - y3)**2 + (y1 - y2) * (G22 * (y1 - y2) + 2 * G12 * (-y1 + y3)))
-                        / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**3)
+                            2 * ((x1 - x3) ** 2 + (y1 - y3) ** 2) *
+                            (G11 * (y1 - y3) ** 2 + (y1 - y2) * (G22 * (y1 - y2) + 2 * G12 * (-y1 + y3)))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
                     )
                     Fyy = -(
-                        2 * (G11 * (x1 - x3)**2 + (x1 - x2) * (G22 * (x1 - x2) + 2 * G12 * (-x1 + x3))) *
-                        ((x1 - x3)**2 + (y1 - y3)**2) /
-                        (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**3)
+                            2 * (G11 * (x1 - x3) ** 2 + (x1 - x2) * (G22 * (x1 - x2) + 2 * G12 * (-x1 + x3))) *
+                            ((x1 - x3) ** 2 + (y1 - y3) ** 2) /
+                            (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
                     )
                     Fxy = (
-                        2 * ((x1 - x3)**2 + (y1 - y3)**2) *
-                        (G22 * (x1 - x2) * (y1 - y2) +
-                         G11 * (x1 - x3) * (y1 - y3) +
-                         G12 * (x2 * y1 + x3 * y1 - x3 * y2 - x2 * y3 + x1 * (-2 * y1 + y2 + y3)))
-                        / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**3)
+                            2 * ((x1 - x3) ** 2 + (y1 - y3) ** 2) *
+                            (G22 * (x1 - x2) * (y1 - y2) +
+                             G11 * (x1 - x3) * (y1 - y3) +
+                             G12 * (x2 * y1 + x3 * y1 - x3 * y2 - x2 * y3 + x1 * (-2 * y1 + y2 + y3)))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
                     )
                     Rx[i, j + 1] += Fx / weight
                     Rxy[i, j + 1] += Fxy / weight
@@ -776,35 +777,35 @@ def functional2(grid_omega, cells, grid_shape):
 
                     # xk-1 : x[i + 1, j] done
                     Fx = (
-                        ((x1 - x2)**2 + (y1 - y2)**2) * (G22 * (-y1 + y2) + 2 * G12 * (y1 - y3)) -
-                        G11 * (-2 * x1 * (x2 * y1 + x3 * y2) +
-                               (y1 - y2) * (-x3**2 + (y1 - y3)**2) +
-                               x1**2 * (y1 + y2 - 2 * y3) +
-                               2 * x2 * x3 * (y1 - y3) +
-                               2 * x1 * (x2 + x3) * y3)
-                    ) / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**2)
+                                 ((x1 - x2) ** 2 + (y1 - y2) ** 2) * (G22 * (-y1 + y2) + 2 * G12 * (y1 - y3)) -
+                                 G11 * (-2 * x1 * (x2 * y1 + x3 * y2) +
+                                        (y1 - y2) * (-x3 ** 2 + (y1 - y3) ** 2) +
+                                        x1 ** 2 * (y1 + y2 - 2 * y3) +
+                                        2 * x2 * x3 * (y1 - y3) +
+                                        2 * x1 * (x2 + x3) * y3)
+                         ) / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 2)
                     Fy = (
-                        (G22 * (x1 - x2) + 2 * G12 * (-x1 + x3)) * ((x1 - x2)**2 + (y1 - y2)**2) +
-                        G11 * (x1**3 - x1**2 * (x2 + 2 * x3) + x2 * (-x3**2 + (y1 - y3)**2) -
-                               2 * x3 * (y1 - y2) * (y1 - y3) +
-                               x1 * (2 * x2 * x3 + x3**2 + (y1 - y3) * (y1 - 2 * y2 + y3)))
-                    ) / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**2)
+                                 (G22 * (x1 - x2) + 2 * G12 * (-x1 + x3)) * ((x1 - x2) ** 2 + (y1 - y2) ** 2) +
+                                 G11 * (x1 ** 3 - x1 ** 2 * (x2 + 2 * x3) + x2 * (-x3 ** 2 + (y1 - y3) ** 2) -
+                                        2 * x3 * (y1 - y2) * (y1 - y3) +
+                                        x1 * (2 * x2 * x3 + x3 ** 2 + (y1 - y3) * (y1 - 2 * y2 + y3)))
+                         ) / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 2)
                     Fxx = -(
-                        2 * ((x1 - x2)**2 + (y1 - y2)**2) *
-                        (G11 * (y1 - y3)**2 + (y1 - y2) * (G22 * (y1 - y2) + 2 * G12 * (-y1 + y3)))
-                        / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**3)
+                            2 * ((x1 - x2) ** 2 + (y1 - y2) ** 2) *
+                            (G11 * (y1 - y3) ** 2 + (y1 - y2) * (G22 * (y1 - y2) + 2 * G12 * (-y1 + y3)))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
                     )
                     Fyy = -(
-                        2 * (G11 * (x1 - x3)**2 + (x1 - x2) * (G22 * (x1 - x2) + 2 * G12 * (-x1 + x3))) *
-                        ((x1 - x2)**2 + (y1 - y2)**2) /
-                        (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**3)
+                            2 * (G11 * (x1 - x3) ** 2 + (x1 - x2) * (G22 * (x1 - x2) + 2 * G12 * (-x1 + x3))) *
+                            ((x1 - x2) ** 2 + (y1 - y2) ** 2) /
+                            (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
                     )
                     Fxy = (
-                        2 * ((x1 - x2)**2 + (y1 - y2)**2) *
-                        (G22 * (x1 - x2) * (y1 - y2) +
-                         G11 * (x1 - x3) * (y1 - y3) +
-                         G12 * (x2 * y1 + x3 * y1 - x3 * y2 - x2 * y3 + x1 * (-2 * y1 + y2 + y3)))
-                        / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3))**3)
+                            2 * ((x1 - x2) ** 2 + (y1 - y2) ** 2) *
+                            (G22 * (x1 - x2) * (y1 - y2) +
+                             G11 * (x1 - x3) * (y1 - y3) +
+                             G12 * (x2 * y1 + x3 * y1 - x3 * y2 - x2 * y3 + x1 * (-2 * y1 + y2 + y3)))
+                            / (Dk * (x3 * (-y1 + y2) + x2 * (y1 - y3) + x1 * (-y2 + y3)) ** 3)
                     )
                     Rx[i + 1, j] += Fx / weight
                     Rxy[i + 1, j] += Fxy / weight
@@ -812,20 +813,20 @@ def functional2(grid_omega, cells, grid_shape):
                     Rxx[i + 1, j] += Fxx / weight
                     Ryy[i + 1, j] += Fyy / weight
 
-                elif k == 1:    # rt corner perf xk=x[i+1, j+1], xk+1=x[i+1, j], xk-1=x[i, j+1]
+                elif k == 1:  # rt corner perf xk=x[i+1, j+1], xk+1=x[i+1, j], xk-1=x[i, j+1]
                     G11 = ((X4 - X3) ** 2) + (Y4 - Y3) ** 2
                     G12 = (X4 - X3) * (X2 - X3) + (
-                                Y4 - Y3) * (
+                            Y4 - Y3) * (
                                   Y2 - Y3)
                     G22 = ((X2 - X3) ** 2) + (Y2 - Y3) ** 2
                     Jk = (x[i + 1, j] - x[i + 1, j + 1]) * (y[i, j + 1] - y[i + 1, j + 1]) - (
-                                x[i, j + 1] - x[i + 1, j + 1]) * (
+                            x[i, j + 1] - x[i + 1, j + 1]) * (
                                  y[i + 1, j] - y[i + 1, j + 1])
                     if Jk <= 0:
                         print("2: flag")
                         flag = 1
                     Dk = (X4 - X3) * (Y2 - Y3) - (
-                                X2 - X3) * (
+                            X2 - X3) * (
                                  Y4 - Y3)
                     alpha = ((x[i + 1, j] - x[i + 1, j + 1]) ** 2) * G22 - 2 * (x[i + 1, j] - x[i + 1, j + 1]) * (
                             x[i, j + 1] - x[i + 1, j + 1]) * G12 + ((
@@ -968,7 +969,7 @@ def functional2(grid_omega, cells, grid_shape):
                     Rxx[i, j + 1] += Fxx / weight
                     Ryy[i, j + 1] += Fyy / weight
 
-                elif k == 2:    # rb corner perf xk = x[i, j + 1], xk+1=x[i+1, j+1], xk-1=x[i, j]
+                elif k == 2:  # rb corner perf xk = x[i, j + 1], xk+1=x[i+1, j+1], xk-1=x[i, j]
                     G11 = ((X3 - X2) ** 2) + (Y3 - Y2) ** 2
                     G12 = (X3 - X2) * (X1 - X2) + (
                             Y3 - Y2) * (
@@ -1122,7 +1123,7 @@ def functional2(grid_omega, cells, grid_shape):
                     Rxx[i, j] += Fxx / weight
                     Ryy[i, j] += Fyy / weight
 
-                elif k == 3:    # lt corner perf xk=x[i+1, j], xk+1=x[i, j], xk-1=x[i+1, j+1]
+                elif k == 3:  # lt corner perf xk=x[i+1, j], xk+1=x[i, j], xk-1=x[i+1, j+1]
                     G11 = (X1 - X4) ** 2 + (Y1 - Y4) ** 2
                     G12 = (X1 - X4) * (X3 - X4) + (
                             Y1 - Y4) * (
@@ -1276,11 +1277,10 @@ def functional2(grid_omega, cells, grid_shape):
                     Rxx[i + 1, j + 1] += Fxx / weight
                     Ryy[i + 1, j + 1] += Fyy / weight
 
-    return aproximation/((nx-1)*(ny-1)*8), Rx, Ry, Rxx, Ryy, Rxy, flag
+    return aproximation / ((nx - 1) * (ny - 1) * 8), Rx, Ry, Rxx, Ryy, Rxy, flag
 
 
 def mimimize(omega, canon, grid_shape, tau, eps, stop_flag=[False]):
-
     maxdif = 99999999
     x, y = omega
     value = 0
@@ -1339,12 +1339,131 @@ def plot_grid(grid, nx, ny, title):
     for i in range(nx):
         for j in range(ny):
             if i < nx - 1:
-                ax.plot([grid[i * ny + j, 0], grid[(i + 1) * ny + j, 0]], [grid[i * ny + j, 1], grid[(i + 1) * ny + j, 1]], 'b-', lw=1)
+                ax.plot([grid[i * ny + j, 0], grid[(i + 1) * ny + j, 0]],
+                        [grid[i * ny + j, 1], grid[(i + 1) * ny + j, 1]], 'b-', lw=1)
             if j < ny - 1:
-                ax.plot([grid[i * ny + j, 0], grid[i * ny + j + 1, 0]], [grid[i * ny + j, 1], grid[i * ny + j + 1, 1]], 'b-', lw=1)
+                ax.plot([grid[i * ny + j, 0], grid[i * ny + j + 1, 0]], [grid[i * ny + j, 1], grid[i * ny + j + 1, 1]],
+                        'b-', lw=1)
     ax.set_aspect('auto', 'box')
     plt.title(title)
     plt.show()
+
+
+def approximate_quad_to_rectangle(x1, y1, x2, y2, x3, y3, x4, y4):
+    # Точки четырёхугольника (в порядке обхода)
+    quad_points = np.array([[x1, y1], [x2, y2], [x3, y3], [x4, y4]])
+
+    # 1. Вычисляем площадь четырёхугольника (формула шнурования)
+    def compute_polygon_area(points):
+        x = points[:, 0]
+        y = points[:, 1]
+        return 0.5 * np.abs(np.sum(x * np.roll(y, -1) - np.roll(x, -1) * y))
+
+    area = compute_polygon_area(quad_points)
+
+    # 2. Находим центроид (среднее координат)
+    centroid = np.mean(quad_points, axis=0)
+
+    # 3. Вычисляем габариты (ширину и высоту) четырёхугольника
+    min_x, max_x = np.min(quad_points[:, 0]), np.max(quad_points[:, 0])
+    min_y, max_y = np.min(quad_points[:, 1]), np.max(quad_points[:, 1])
+    width = max_x - min_x
+    height = max_y - min_y
+
+    # 4. Корректируем стороны прямоугольника, сохраняя площадь и пропорции
+    aspect_ratio = width / height if height != 0 else 1.0  # избегаем деления на 0
+    new_height = np.sqrt(area / aspect_ratio)
+    new_width = area / new_height
+
+    # 5. Строим прямоугольник с центром в центроиде
+    rect_half_width = new_width / 2
+    rect_half_height = new_height / 2
+
+    # Координаты вершин прямоугольника
+    rect_x1 = centroid[0] - rect_half_width
+    rect_y1 = centroid[1] - rect_half_height
+
+    rect_x2 = centroid[0] + rect_half_width
+    rect_y2 = centroid[1] - rect_half_height
+
+    rect_x3 = centroid[0] + rect_half_width
+    rect_y3 = centroid[1] + rect_half_height
+
+    rect_x4 = centroid[0] - rect_half_width
+    rect_y4 = centroid[1] + rect_half_height
+
+    # Возвращаем 8 переменных + площадь + центроид
+    return (
+        rect_x1, rect_y1, rect_x2, rect_y2, rect_x3, rect_y3, rect_x4, rect_y4
+    )
+
+
+def approximate_quad_by_pca(x1, y1, x2, y2, x3, y3, x4, y4):
+    # Точки четырёхугольника
+    points = np.array([[x1, y1], [x2, y2], [x3, y3], [x4, y4]])
+
+    # 1. Применяем PCA для определения главных осей
+    pca = PCA(n_components=2)
+    pca.fit(points)
+
+    # Главные компоненты (направления)
+    pc1 = pca.components_[0]  # первая главная компонента (наибольшая дисперсия)
+    pc2 = pca.components_[1]  # вторая главная компонента
+
+    # Центроид (среднее точек)
+    centroid = np.mean(points, axis=0)
+
+    # 2. Проецируем точки на главные оси, чтобы определить "размеры"
+    projected = pca.transform(points)
+    min_pc1, max_pc1 = np.min(projected[:, 0]), np.max(projected[:, 0])
+    min_pc2, max_pc2 = np.min(projected[:, 1]), np.max(projected[:, 1])
+
+    # Размеры вдоль главных осей
+    length = max_pc1 - min_pc1  # "длина" (по первой компоненте)
+    width = max_pc2 - min_pc2  # "ширина" (по второй компоненте)
+
+    # 3. Угол поворота прямоугольника (наклон первой компоненты)
+    angle = np.arctan2(pc1[1], pc1[0])
+
+    # 4. Строим прямоугольник в новой системе координат
+    # Углы прямоугольника (до поворота)
+    half_length = length / 2
+    half_width = width / 2
+    rect_local = np.array([
+        [-half_length, -half_width],
+        [half_length, -half_width],
+        [half_length, half_width],
+        [-half_length, half_width]
+    ])
+
+    # Поворачиваем прямоугольник обратно в исходную систему
+    rotation_matrix = np.array([
+        [np.cos(angle), np.sin(angle)],
+        [-np.sin(angle), np.cos(angle)]
+    ])
+    rect_rotated = np.dot(rect_local, rotation_matrix)
+
+    # Сдвигаем к центроиду
+    rect_final = rect_rotated + centroid
+
+    # Разбиваем координаты на отдельные переменные
+    rect_x1, rect_y1 = rect_final[0]
+    rect_x2, rect_y2 = rect_final[1]
+    rect_x3, rect_y3 = rect_final[2]
+    rect_x4, rect_y4 = rect_final[3]
+
+    # Площадь исходного четырёхугольника (для сравнения)
+    def compute_area(points):
+        x = points[:, 0]
+        y = points[:, 1]
+        return 0.5 * np.abs(np.sum(x * np.roll(y, -1) - np.roll(x, -1) * y))
+
+    original_area = compute_area(points)
+    new_area = length * width  # площадь прямоугольника
+
+    return (
+        rect_x1, rect_y1, rect_x2, rect_y2, rect_x3, rect_y3, rect_x4, rect_y4, original_area, new_area
+    )
 
 
 # ТЕСТЫ #
@@ -1488,69 +1607,69 @@ def implicit_transfinite_better(discr, nod=None):
 
     t_x_val, t_y_val, b_x_val, b_y_val, r_x_val, r_y_val, l_x_val, l_y_val, = lr_points(xup, yup, xlow, ylow)
 
-    X = np.zeros((m*n, m*n))  # матрица (позиция иксов исходя из дискретизации; иксы на этой позиции)
-    Y = np.zeros((m*m, m*n))
-    bx = np.zeros(m*n)
-    by = np.zeros(m*n)
+    X = np.zeros((m * n, m * n))  # матрица (позиция иксов исходя из дискретизации; иксы на этой позиции)
+    Y = np.zeros((m * m, m * n))
+    bx = np.zeros(m * n)
+    by = np.zeros(m * n)
     for i in range(discr):
         for j in range(discr):
 
-            gidx = i*discr + j
+            gidx = i * discr + j
 
             if j == 0:
-                X[gidx, i*discr + j] = 1.0
+                X[gidx, i * discr + j] = 1.0
                 bx[gidx] = b_x_val[i]
             elif j == discr - 1:
-                X[gidx, i*discr + j] = 1.0
+                X[gidx, i * discr + j] = 1.0
                 bx[gidx] = t_x_val[i]
             elif i == 0:
-                X[gidx, i*discr + j] = 1.0
+                X[gidx, i * discr + j] = 1.0
                 bx[gidx] = l_x_val[j]
             elif i == discr - 1:
-                X[gidx, i*discr + j] = 1.0
+                X[gidx, i * discr + j] = 1.0
                 bx[gidx] = r_x_val[j]
-            elif nod != None and i == nod[0]-1 and j == nod[1]-1:
+            elif nod != None and i == nod[0] - 1 and j == nod[1] - 1:
                 X[gidx, i * discr + j] = 1.0
                 bx[gidx] = nod[2]
             else:
                 X[gidx, i * discr + j] = 1.0
-                X[gidx, (i-1) * discr + j] = -1/2
-                X[gidx, (i+1) * discr + j] = -1/2
-                X[gidx, i * discr + (j-1)] = -1/2
-                X[gidx, i * discr + (j+1)] = -1/2
-                X[gidx, (i+1) * discr + (j+1)] = 1/4
-                X[gidx, (i+1) * discr + (j-1)] = 1/4
-                X[gidx, (i-1) * discr + (j+1)] = 1/4
-                X[gidx, (i-1) * discr + (j-1)] = 1/4
+                X[gidx, (i - 1) * discr + j] = -1 / 2
+                X[gidx, (i + 1) * discr + j] = -1 / 2
+                X[gidx, i * discr + (j - 1)] = -1 / 2
+                X[gidx, i * discr + (j + 1)] = -1 / 2
+                X[gidx, (i + 1) * discr + (j + 1)] = 1 / 4
+                X[gidx, (i + 1) * discr + (j - 1)] = 1 / 4
+                X[gidx, (i - 1) * discr + (j + 1)] = 1 / 4
+                X[gidx, (i - 1) * discr + (j - 1)] = 1 / 4
                 bx[gidx] = 0.0
     for i in range(discr):
         for j in range(discr):
-            gidx = i*discr + j
+            gidx = i * discr + j
             if j == 0:
-                Y[gidx, i*discr + j] = 1.0
+                Y[gidx, i * discr + j] = 1.0
                 by[gidx] = b_y_val[i]
             elif j == discr - 1:
-                Y[gidx, i*discr + j] = 1.0
+                Y[gidx, i * discr + j] = 1.0
                 by[gidx] = t_y_val[i]
             elif i == 0:
-                Y[gidx, i*discr + j] = 1.0
+                Y[gidx, i * discr + j] = 1.0
                 by[gidx] = l_y_val[j]
             elif i == discr - 1:
-                Y[gidx, i*discr + j] = 1.0
+                Y[gidx, i * discr + j] = 1.0
                 by[gidx] = r_y_val[j]
-            elif nod != None and i == nod[1]-1 and j == nod[0]-1:
+            elif nod != None and i == nod[1] - 1 and j == nod[0] - 1:
                 Y[gidx, i * discr + j] = 1.0
                 by[gidx] = nod[3]
             else:
                 Y[gidx, i * discr + j] = 1.0
-                Y[gidx, (i-1) * discr + j] = -1/2
-                Y[gidx, (i+1) * discr + j] = -1/2
-                Y[gidx, i * discr + (j-1)] = -1/2
-                Y[gidx, i * discr + (j+1)] = -1/2
-                Y[gidx, (i+1) * discr + (j+1)] = 1/4
-                Y[gidx, (i+1) * discr + (j-1)] = 1/4
-                Y[gidx, (i-1) * discr + (j+1)] = 1/4
-                Y[gidx, (i-1) * discr + (j-1)] = 1/4
+                Y[gidx, (i - 1) * discr + j] = -1 / 2
+                Y[gidx, (i + 1) * discr + j] = -1 / 2
+                Y[gidx, i * discr + (j - 1)] = -1 / 2
+                Y[gidx, i * discr + (j + 1)] = -1 / 2
+                Y[gidx, (i + 1) * discr + (j + 1)] = 1 / 4
+                Y[gidx, (i + 1) * discr + (j - 1)] = 1 / 4
+                Y[gidx, (i - 1) * discr + (j + 1)] = 1 / 4
+                Y[gidx, (i - 1) * discr + (j - 1)] = 1 / 4
                 by[gidx] = 0.0
     X_res = (np.linalg.solve(X, bx)).reshape((n, m))
     Y_res = (np.linalg.solve(Y, by)).reshape((n, m))
@@ -1563,21 +1682,21 @@ def implicit_transfinite_better(discr, nod=None):
         for i in range(n):
             x0 = X_res[0, i]
             xN = X_res[elem_sdvig, i]
-            X_res[point, i] = x0 + (xN - x0)*(ind/elem_sdvig)**1
+            X_res[point, i] = x0 + (xN - x0) * (ind / elem_sdvig) ** 1
         ind += 1
     ind = 1
-    for point in range(n-elem_sdvig, n-1):  # pravo
+    for point in range(n - elem_sdvig, n - 1):  # pravo
         for i in range(n):
-            x0 = X_res[n-(elem_sdvig+1), i]
-            xN = X_res[n-1, i]
-            X_res[point, i] = xN - (xN - x0)*(1-(ind/elem_sdvig))**1
+            x0 = X_res[n - (elem_sdvig + 1), i]
+            xN = X_res[n - 1, i]
+            X_res[point, i] = xN - (xN - x0) * (1 - (ind / elem_sdvig)) ** 1
         ind += 1
     return [X_res, Y_res]
 
 
 node2 = [11, 11, 0.6, 0.5]
 
-nx = ny = 55    # ------------------------------------------------------------------------------------------------------
+nx = ny = 55  # РАЗМЕРНОСТЬ---------------------------------------------------------------------------------------------
 # canon_grid = implicit_transfinite_interpol(nx, sq_t1, sq_b1, sq_l1, sq_r1)
 # canon_grid, count = winslow_without_implicit(NX, Xyt, Xyb, Xyr, Xyl, treshhold)
 # canon_grid = transfinite_interpol(nx, Xyt, Xyb, Xyl, Xyr)
@@ -1587,15 +1706,15 @@ canon_grid = implicit_transfinite_interpol(nx, sq_t2, sq_b2, sq_l2, sq_r2)
 
 # start
 coef_temp = 1
-dc = 0.06
+dc = 0.08
 
-for i in range(nx//2 + coef_temp, nx-1):    # низ
+for i in range(nx // 2 + coef_temp, nx - 1):  # низ
     for j in range(ny):
-        if i != 0 and i != ny-1 and elem_sdvig-1 < j < ny - elem_sdvig:
+        if i != 0 and i != ny - 1 and elem_sdvig - 1 < j < ny - elem_sdvig:
             dense_coef = 1
-            razn = abs(canon_grid[0][i][j] - canon_grid[0][i][j]**(dense_coef+dc*coef_temp))
-            canon_grid[0][i][j] = canon_grid[0][i][j]**(dense_coef+dc*coef_temp)
-            canon_grid[0][nx//2 - coef_temp][j] += razn*1.07
+            razn = abs(canon_grid[0][i][j] - canon_grid[0][i][j] ** (dense_coef + dc * coef_temp))
+            canon_grid[0][i][j] = canon_grid[0][i][j] ** (dense_coef + dc * coef_temp)
+            canon_grid[0][nx // 2 - coef_temp][j] += razn * 1.07
     coef_temp += 1
 
 """ind = 1
@@ -1637,14 +1756,14 @@ for point in range(1, elem_sdvig):  # pravo
     for i in range(nx):
         x0 = canon_grid[1][i][0]
         xN = canon_grid[1][i][elem_sdvig]
-        canon_grid[1][i][point] = x0 + (xN - x0)*(ind/elem_sdvig)**1
+        canon_grid[1][i][point] = x0 + (xN - x0) * (ind / elem_sdvig) ** 1
     ind += 1
 ind = 1
-for point in range(nx-elem_sdvig, nx-1):    # levo
+for point in range(nx - elem_sdvig, nx - 1):  # levo
     for i in range(nx):
-        x0 = canon_grid[1][i][nx-(elem_sdvig+1)]
-        xN = canon_grid[1][i][nx-1]
-        canon_grid[1][i][point] = xN - (xN - x0)*(1-(ind/elem_sdvig))**1
+        x0 = canon_grid[1][i][nx - (elem_sdvig + 1)]
+        xN = canon_grid[1][i][nx - 1]
+        canon_grid[1][i][point] = xN - (xN - x0) * (1 - (ind / elem_sdvig)) ** 1
     ind += 1
 # finish
 
@@ -1660,124 +1779,7 @@ xx, yy = canon_grid[0], canon_grid[1]
 canon_grid = (xx, yy)
 
 # ПЕРЕХОД ОТ СЕТКИ К ЯЧЕЙКАМ ------------------------------------------------------------------------------------------
-
-
-def approximate_quad_to_rectangle(x1, y1, x2, y2, x3, y3, x4, y4):
-    # Точки четырёхугольника (в порядке обхода)
-    quad_points = np.array([[x1, y1], [x2, y2], [x3, y3], [x4, y4]])
-
-    # 1. Вычисляем площадь четырёхугольника (формула шнурования)
-    def compute_polygon_area(points):
-        x = points[:, 0]
-        y = points[:, 1]
-        return 0.5 * np.abs(np.sum(x * np.roll(y, -1) - np.roll(x, -1) * y))
-
-    area = compute_polygon_area(quad_points)
-
-    # 2. Находим центроид (среднее координат)
-    centroid = np.mean(quad_points, axis=0)
-
-    # 3. Вычисляем габариты (ширину и высоту) четырёхугольника
-    min_x, max_x = np.min(quad_points[:, 0]), np.max(quad_points[:, 0])
-    min_y, max_y = np.min(quad_points[:, 1]), np.max(quad_points[:, 1])
-    width = max_x - min_x
-    height = max_y - min_y
-
-    # 4. Корректируем стороны прямоугольника, сохраняя площадь и пропорции
-    aspect_ratio = width / height if height != 0 else 1.0  # избегаем деления на 0
-    new_height = np.sqrt(area / aspect_ratio)
-    new_width = area / new_height
-
-    # 5. Строим прямоугольник с центром в центроиде
-    rect_half_width = new_width / 2
-    rect_half_height = new_height / 2
-
-    # Координаты вершин прямоугольника
-    rect_x1 = centroid[0] - rect_half_width
-    rect_y1 = centroid[1] - rect_half_height
-
-    rect_x2 = centroid[0] + rect_half_width
-    rect_y2 = centroid[1] - rect_half_height
-
-    rect_x3 = centroid[0] + rect_half_width
-    rect_y3 = centroid[1] + rect_half_height
-
-    rect_x4 = centroid[0] - rect_half_width
-    rect_y4 = centroid[1] + rect_half_height
-
-    # Возвращаем 8 переменных + площадь + центроид
-    return (
-        rect_x1, rect_y1, rect_x2, rect_y2, rect_x3, rect_y3, rect_x4, rect_y4
-    )
-
-
-def approximate_quad_by_pca(x1, y1, x2, y2, x3, y3, x4, y4):
-    # Точки четырёхугольника
-    points = np.array([[x1, y1], [x2, y2], [x3, y3], [x4, y4]])
-
-    # 1. Применяем PCA для определения главных осей
-    pca = PCA(n_components=2)
-    pca.fit(points)
-
-    # Главные компоненты (направления)
-    pc1 = pca.components_[0]  # первая главная компонента (наибольшая дисперсия)
-    pc2 = pca.components_[1]  # вторая главная компонента
-
-    # Центроид (среднее точек)
-    centroid = np.mean(points, axis=0)
-
-    # 2. Проецируем точки на главные оси, чтобы определить "размеры"
-    projected = pca.transform(points)
-    min_pc1, max_pc1 = np.min(projected[:, 0]), np.max(projected[:, 0])
-    min_pc2, max_pc2 = np.min(projected[:, 1]), np.max(projected[:, 1])
-
-    # Размеры вдоль главных осей
-    length = max_pc1 - min_pc1  # "длина" (по первой компоненте)
-    width = max_pc2 - min_pc2  # "ширина" (по второй компоненте)
-
-    # 3. Угол поворота прямоугольника (наклон первой компоненты)
-    angle = np.arctan2(pc1[1], pc1[0])
-
-    # 4. Строим прямоугольник в новой системе координат
-    # Углы прямоугольника (до поворота)
-    half_length = length / 2
-    half_width = width / 2
-    rect_local = np.array([
-        [-half_length, -half_width],
-        [half_length, -half_width],
-        [half_length, half_width],
-        [-half_length, half_width]
-    ])
-
-    # Поворачиваем прямоугольник обратно в исходную систему
-    rotation_matrix = np.array([
-        [np.cos(angle), np.sin(angle)],
-        [-np.sin(angle), np.cos(angle)]
-    ])
-    rect_rotated = np.dot(rect_local, rotation_matrix)
-
-    # Сдвигаем к центроиду
-    rect_final = rect_rotated + centroid
-
-    # Разбиваем координаты на отдельные переменные
-    rect_x1, rect_y1 = rect_final[0]
-    rect_x2, rect_y2 = rect_final[1]
-    rect_x3, rect_y3 = rect_final[2]
-    rect_x4, rect_y4 = rect_final[3]
-
-    # Площадь исходного четырёхугольника (для сравнения)
-    def compute_area(points):
-        x = points[:, 0]
-        y = points[:, 1]
-        return 0.5 * np.abs(np.sum(x * np.roll(y, -1) - np.roll(x, -1) * y))
-
-    original_area = compute_area(points)
-    new_area = length * width  # площадь прямоугольника
-
-    return (
-        rect_x1, rect_y1, rect_x2, rect_y2, rect_x3, rect_y3, rect_x4, rect_y4, original_area, new_area
-    )
-
+aspects = np.zeros((nx - 1, ny - 1))
 
 cells_x = np.empty((nx - 1, ny - 1), dtype=object)
 cells_y = np.empty((nx - 1, ny - 1), dtype=object)
@@ -1798,33 +1800,21 @@ for i in range(nx - 1):
         cy[1, 0] = canon_grid[1][i + 1, j]
         cx[0, 1] = canon_grid[0][i, j + 1]
         cy[0, 1] = canon_grid[1][i, j + 1]
+        t_side = ((cx[1, 1] - cx[1, 0]) ** 2 + (cy[1, 1] - cy[1, 0]) ** 2) ** 0.5
+        b_side = ((cx[0, 0] - cx[0, 1]) ** 2 + (cy[0, 0] - cy[0, 1]) ** 2) ** 0.5
+        l_side = ((cx[0, 0] - cx[1, 0]) ** 2 + (cy[0, 0] - cy[1, 0]) ** 2) ** 0.5
+        r_side = ((cx[1, 1] - cx[0, 1]) ** 2 + (cy[1, 1] - cy[0, 1]) ** 2) ** 0.5
+        sides = np.array([t_side, b_side, l_side, r_side])
+        aspects[i, j] = np.max(sides) / np.min(sides)
         # (cx[0, 0], cy[0, 0], cx[0, 1], cy[0, 1], cx[1, 1], cy[1, 1], cx[1, 0], cy[1, 0], new_ar, orig_ar) = \
         (x1, y1, x2, y2, x3, y3, x4, y4, new_ar, orig_ar) = \
             approximate_quad_by_pca(cx[0, 0], cy[0, 0], cx[0, 1], cy[0, 1], cx[1, 1], cy[1, 1], cx[1, 0], cy[1, 0])
-        if abs(new_ar - orig_ar) < 1e-9:
-            (cx[0, 0], cy[0, 0], cx[0, 1], cy[0, 1], cx[1, 1], cy[1, 1], cx[1, 0], cy[1, 0]) = \
-                (x1, y1, x2, y2, x3, y3, x4, y4)
-        else:
-            cx[0, 0], cy[0, 0], cx[0, 1], cy[0, 1], cx[1, 1], cy[1, 1], cx[1, 0], cy[1, 0] =\
-                approximate_quad_to_rectangle(
-                    cx[0, 0], cy[0, 0], cx[0, 1], cy[0, 1], cx[1, 1], cy[1, 1], cx[1, 0], cy[1, 0])
+
+        cx[1, 0], cy[1, 0], cx[0, 0], cy[0, 0], cx[0, 1], cy[0, 1], cx[1, 1], cy[1, 1] = \
+            (x1, y1, x2, y2, x3, y3, x4, y4)
+print(f"max aspect canon = {np.max(aspects)}\n", f"min aspect canon = {np.min(aspects)}\n")
+
 cells = np.array([cells_x, cells_y])
-
-"""
-for i in range(nx-1, -1, -1):
-    for j in range(ny):
-        print(round(canon_grid[0][i, j], 3), end="\t")
-    print("\n")
-print("\n"*5)
-for i in range(nx-1, -1, -1):
-    for j in range(ny):
-        print(round(canon_grid[1][i, j], 3), end="\t")
-    print("\n")"""
-
-"""print(xx)
-print("x ", xx[0, 0], xx[nx-1, ny-1])
-print("y ", yy[0, 0], yy[nx-1, ny-1])"""
-
 
 # omega_grid2, count = winslow_without_implicit(nx, Xyt, Xyb, Xyr, Xyl, treshhold)
 # omega_grid2 = implicit_transfinite_interpol(nx, myt, myb, myr, myl)
@@ -1837,7 +1827,7 @@ omega_grid2 = implicit_transfinite_better(nx)  # vot eto na diplom
 # omega_grid2 = implicit_transfinite_interpol(nx, sq_t1, sq_b1, sq_l1, sq_r1)
 # print("\n")
 # print(omega_grid2)
-omega_grid2[0] = np.flip(omega_grid2[0], axis=0)    # Если имплисит, то это в комменте должно быть
+omega_grid2[0] = np.flip(omega_grid2[0], axis=0)  # Если имплисит, то это в комменте должно быть
 omega_grid2[1] = np.flip(omega_grid2[1], axis=0)
 """omega_grid2[0] = np.transpose(omega_grid2[0])
 omega_grid2[1] = np.transpose(omega_grid2[1])"""
@@ -1862,7 +1852,38 @@ plt.plot(-np.transpose(canon_grid[1]), np.transpose(canon_grid[0]), c="b", linew
 plt.plot(-canon_grid[1], canon_grid[0], c="b", linewidth=1)
 plt.show()
 
-### МЕЙН ВЫЗОВ ###
+aspects = np.zeros((nx - 1, ny - 1))
+
+cells_x = np.empty((nx - 1, ny - 1), dtype=object)
+cells_y = np.empty((nx - 1, ny - 1), dtype=object)
+for i in range(nx - 1):
+    for j in range(ny - 1):
+        cells_x[i, j] = np.zeros((2, 2))
+        cells_y[i, j] = np.zeros((2, 2))
+
+for i in range(nx - 1):
+    for j in range(ny - 1):
+        min_side = 1000
+        max_side = 0
+        cx = cells_x[i, j]
+        cy = cells_y[i, j]
+        cx[0, 0] = omega_grid2[0][i, j]
+        cy[0, 0] = omega_grid2[1][i, j]
+        cx[1, 1] = omega_grid2[0][i + 1, j + 1]
+        cy[1, 1] = omega_grid2[1][i + 1, j + 1]
+        cx[1, 0] = omega_grid2[0][i + 1, j]
+        cy[1, 0] = omega_grid2[1][i + 1, j]
+        cx[0, 1] = omega_grid2[0][i, j + 1]
+        cy[0, 1] = omega_grid2[1][i, j + 1]
+        t_side = ((cx[1, 1] - cx[1, 0]) ** 2 + (cy[1, 1] - cy[1, 0]) ** 2) ** 0.5
+        b_side = ((cx[0, 0] - cx[0, 1]) ** 2 + (cy[0, 0] - cy[0, 1]) ** 2) ** 0.5
+        l_side = ((cx[0, 0] - cx[1, 0]) ** 2 + (cy[0, 0] - cy[1, 0]) ** 2) ** 0.5
+        r_side = ((cx[1, 1] - cx[0, 1]) ** 2 + (cy[1, 1] - cy[0, 1]) ** 2) ** 0.5
+        sides = np.array([t_side, b_side, l_side, r_side])
+        aspects[i, j] = np.max(sides) / np.min(sides)
+print(f"max aspect omega1 = {np.max(aspects)}\n", f"min aspect omega1 = {np.min(aspects)}\n")
+
+#   МЕЙН ВЫЗОВ----------------------------------------------------------------------------------------------------------
 """new_grid = mimimize(omega_grid, canon_grid, (nx, ny), 1, 10**(-8))"""
 """new_grid, value = hooke_jeeves(omega_grid2, canon_grid, (nx, ny), 0.1, 0.0001)"""
 global_iter_flag = 0
@@ -1879,18 +1900,48 @@ def stop_optimization():
 # Запуск "слушателя кнопки" в отдельном потоке
 threading.Thread(target=stop_optimization).start()
 
-omega_grid2, flag = mimimize(omega_grid2, cells, (nx, ny), 5, 1e-6, stop_flag=stop_flag)
+omega_grid2, flag = mimimize(omega_grid2, cells, (nx, ny), 5, 1e-5, stop_flag=stop_flag)
 
 # omega_grid2, count = winslow(nx, omega_grid2[0], omega_grid2[1], treshhold, 8)
+
+#   Подсчеты + график --------------------------------------------------------------------------------------------------
+aspects = np.zeros((nx - 1, ny - 1))
+
+cells_x = np.empty((nx - 1, ny - 1), dtype=object)
+cells_y = np.empty((nx - 1, ny - 1), dtype=object)
+for i in range(nx - 1):
+    for j in range(ny - 1):
+        cells_x[i, j] = np.zeros((2, 2))
+        cells_y[i, j] = np.zeros((2, 2))
+
+for i in range(nx - 1):
+    for j in range(ny - 1):
+        min_side = 1000
+        max_side = 0
+        cx = cells_x[i, j]
+        cy = cells_y[i, j]
+        cx[0, 0] = omega_grid2[0][i, j]
+        cy[0, 0] = omega_grid2[1][i, j]
+        cx[1, 1] = omega_grid2[0][i + 1, j + 1]
+        cy[1, 1] = omega_grid2[1][i + 1, j + 1]
+        cx[1, 0] = omega_grid2[0][i + 1, j]
+        cy[1, 0] = omega_grid2[1][i + 1, j]
+        cx[0, 1] = omega_grid2[0][i, j + 1]
+        cy[0, 1] = omega_grid2[1][i, j + 1]
+        t_side = ((cx[1, 1] - cx[1, 0]) ** 2 + (cy[1, 1] - cy[1, 0]) ** 2) ** 0.5
+        b_side = ((cx[0, 0] - cx[0, 1]) ** 2 + (cy[0, 0] - cy[0, 1]) ** 2) ** 0.5
+        l_side = ((cx[0, 0] - cx[1, 0]) ** 2 + (cy[0, 0] - cy[1, 0]) ** 2) ** 0.5
+        r_side = ((cx[1, 1] - cx[0, 1]) ** 2 + (cy[1, 1] - cy[0, 1]) ** 2) ** 0.5
+        sides = np.array([t_side, b_side, l_side, r_side])
+        aspects[i, j] = np.max(sides) / np.min(sides)
+print(f"max aspect omega2 = {np.max(aspects)}\n", f"min aspect omega2 = {np.min(aspects)}\n")
 
 new_grid = omega_grid2
 plt.plot(new_grid[0], new_grid[1], c="b", linewidth=1)
 plt.plot(np.transpose(new_grid[0]), np.transpose(new_grid[1]), c="b", linewidth=1)
 plt.show()
 
-
-
-### ТЕСТ АПРОКСИМАЦИИ ###
+#   ТЕСТЫ---------------------------------------------------------------------------------------------------------------
 """functional(omega_grid2, canon_grid, (nx, ny))
 functional2(omega_grid2, canon_grid, (nx, ny))"""
 

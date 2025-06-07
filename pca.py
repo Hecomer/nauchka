@@ -73,7 +73,9 @@ def approximate_quad_by_pca(x1, y1, x2, y2, x3, y3, x4, y4):
 
 
 # Пример использования
-x1, y1, x2, y2, x3, y3, x4, y4 = 0.7751372587635112, 0.8888888888947125, 0.8002091452414226, 0.8888888888962341, 0.8047161867342936, 0.9629629629633799, 0.7799004073644833, 0.9629629629637829
+x1, y1, x2, y2, x3, y3, x4, y4 = 0.7701372587635112, 0.8888888888947125, 0.8002091452414226,\
+                                 0.8888888888962341, 0.8047161867342936, 0.9629629629633799,\
+                                 0.7799004073644833, 0.9629629629637829
 
 
 # Получаем все переменные
@@ -113,9 +115,9 @@ plt.plot(np.append(rect_points[:, 0], rect_points[0, 0]),
          'r-', label='PCA-прямоугольник')
 plt.plot(rect_points[:, 0], rect_points[:, 1], 'ro')
 
-plt.plot(centroid_x, centroid_y, 'g*', markersize=10, label='Центроид')
+plt.plot(centroid_x, centroid_y, 'g.', markersize=10, label='Центр')
 plt.axis('equal')
 plt.legend()
 plt.grid(True)
-plt.title(f'PCA-аппроксимация (Площадь: {original_area:.2f} → {new_area:.2f})')
+plt.title(f'PCA-аппроксимация (Площадь: {original_area:.5f} → {new_area:.5f})')
 plt.show()
