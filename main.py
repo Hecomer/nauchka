@@ -1053,6 +1053,42 @@ def plot_grid(grid, nx, ny, title):
     plt.show()
 
 
+def aspects_computation(size, grid):
+    nx, ny = size[0], size[1]
+    aspects = np.zeros((nx - 1, ny - 1))
+
+    cells_x = np.empty((nx - 1, ny - 1), dtype=object)
+    cells_y = np.empty((nx - 1, ny - 1), dtype=object)
+    for i in range(nx - 1):
+        for j in range(ny - 1):
+            cells_x[i, j] = np.zeros((2, 2))
+            cells_y[i, j] = np.zeros((2, 2))
+
+    for i in range(nx - 1):
+        for j in range(ny - 1):
+            cx = cells_x[i, j]
+            cy = cells_y[i, j]
+            cx[0, 0] = grid[0][i, j]
+            cy[0, 0] = grid[1][i, j]
+            cx[1, 1] = grid[0][i + 1, j + 1]
+            cy[1, 1] = grid[1][i + 1, j + 1]
+            cx[1, 0] = grid[0][i + 1, j]
+            cy[1, 0] = grid[1][i + 1, j]
+            cx[0, 1] = grid[0][i, j + 1]
+            cy[0, 1] = grid[1][i, j + 1]
+            t_side = ((cx[1, 1] - cx[1, 0]) ** 2 + (cy[1, 1] - cy[1, 0]) ** 2) ** 0.5
+            b_side = ((cx[0, 0] - cx[0, 1]) ** 2 + (cy[0, 0] - cy[0, 1]) ** 2) ** 0.5
+            l_side = ((cx[0, 0] - cx[1, 0]) ** 2 + (cy[0, 0] - cy[1, 0]) ** 2) ** 0.5
+            r_side = ((cx[1, 1] - cx[0, 1]) ** 2 + (cy[1, 1] - cy[0, 1]) ** 2) ** 0.5
+            sides = np.array([t_side, b_side, l_side, r_side])
+            aspects[i, j] = np.max(sides) / np.min(sides)
+    print(f"max aspect canon = {np.max(aspects)}\n", f"min aspect canon = {np.min(aspects)}\n")
+    def compute_polygon_area(points):
+        x = points[:, 0]
+        y = points[:, 1]
+        return 0.5 * np.abs(np.sum(x * np.roll(y, -1) - np.roll(x, -1) * y))
+
+
 # ТЕСТЫ #
 treshhold = 1e-8
 

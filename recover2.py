@@ -1685,6 +1685,7 @@ def implicit_transfinite_better(discr, nod=None):
 node2 = [11, 11, 0.6, 0.5]
 
 nx = ny = 53    # ------------------------------------------------------------------------------------------------------
+
 # canon_grid = implicit_transfinite_interpol(nx, sq_t1, sq_b1, sq_l1, sq_r1)
 # canon_grid, count = winslow_without_implicit(NX, Xyt, Xyb, Xyr, Xyl, treshhold)
 # canon_grid = transfinite_interpol(nx, Xyt, Xyb, Xyl, Xyr)

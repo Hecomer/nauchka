@@ -1466,47 +1466,91 @@ def approximate_quad_by_pca(x1, y1, x2, y2, x3, y3, x4, y4):
     )
 
 
+def compute_polygon_area(x1, y1, x2, y2, x3, y3, x4, y4):
+    points = np.array([[x1, y1], [x2, y2], [x3, y3], [x4, y4]])
+    x = points[:, 0]
+    y = points[:, 1]
+    return 0.5 * np.abs(np.sum(x * np.roll(y, -1) - np.roll(x, -1) * y))
+
+
+def vector_angle_deg(u, v):
+    dot = u[0]*v[0] + u[1]*v[1]
+    norm_u = math.hypot(*u)
+    norm_v = math.hypot(*v)
+    cos_theta = dot / (norm_u * norm_v)
+    # Ограничим значение в допустимом диапазоне [-1, 1] из-за погрешностей
+    cos_theta = max(-1, min(1, cos_theta))
+    angle_rad = math.acos(cos_theta)
+    return math.degrees(angle_rad)
+
+
+def orthogonality_degree(A, B, C, D):
+    # Векторы
+    AB = (B[0] - A[0], B[1] - A[1])
+    BC = (C[0] - B[0], C[1] - B[1])
+    CD = (D[0] - C[0], D[1] - C[1])
+    DA = (A[0] - D[0], A[1] - D[1])
+
+    # Углы между смежными сторонами
+    angles = [
+        vector_angle_deg(AB, BC),  # угол при B
+        vector_angle_deg(BC, CD),  # угол при C
+        vector_angle_deg(CD, DA),  # угол при D
+        vector_angle_deg(DA, AB),  # угол при A
+    ]
+
+    # Среднеквадратичное отклонение от 90°
+    rms_error = math.sqrt(sum((angle - 90)**2 for angle in angles) / 4)
+    return rms_error
+
+
+def aspects_computation(size, grid):
+    nx, ny = size[0], size[1]
+    aspects = np.zeros((nx - 1, ny - 1))
+    areas = np.zeros((nx - 1, ny - 1))
+    orths = np.zeros((nx - 1, ny - 1))
+
+    cells_x = np.empty((nx - 1, ny - 1), dtype=object)
+    cells_y = np.empty((nx - 1, ny - 1), dtype=object)
+    for i in range(nx - 1):
+        for j in range(ny - 1):
+            cells_x[i, j] = np.zeros((2, 2))
+            cells_y[i, j] = np.zeros((2, 2))
+
+    for i in range(nx - 1):
+        for j in range(ny - 1):
+            cx = cells_x[i, j]
+            cy = cells_y[i, j]
+            cx[0, 0] = grid[0][i, j]
+            cy[0, 0] = grid[1][i, j]
+            cx[1, 1] = grid[0][i + 1, j + 1]
+            cy[1, 1] = grid[1][i + 1, j + 1]
+            cx[1, 0] = grid[0][i + 1, j]
+            cy[1, 0] = grid[1][i + 1, j]
+            cx[0, 1] = grid[0][i, j + 1]
+            cy[0, 1] = grid[1][i, j + 1]
+            t_side = ((cx[1, 1] - cx[1, 0]) ** 2 + (cy[1, 1] - cy[1, 0]) ** 2) ** 0.5
+            b_side = ((cx[0, 0] - cx[0, 1]) ** 2 + (cy[0, 0] - cy[0, 1]) ** 2) ** 0.5
+            l_side = ((cx[0, 0] - cx[1, 0]) ** 2 + (cy[0, 0] - cy[1, 0]) ** 2) ** 0.5
+            r_side = ((cx[1, 1] - cx[0, 1]) ** 2 + (cy[1, 1] - cy[0, 1]) ** 2) ** 0.5
+            sides = np.array([t_side, b_side, l_side, r_side])
+            aspects[i, j] = np.max(sides) / np.min(sides)
+            areas[i, j] = compute_polygon_area(cx[0, 0], cy[0, 0], cx[0, 1], cy[0, 1],
+                                               cx[1, 1], cy[1, 1], cx[1, 0], cy[1, 0])
+            orths[i, j] = orthogonality_degree((cx[0, 0], cy[0, 0]), (cx[0, 1], cy[0, 1]),
+                                               (cx[1, 1], cy[1, 1]), (cx[1, 0], cy[1, 0]))
+    print(f"max aspect = {np.max(aspects)}\n", f"min aspect = {np.min(aspects)}")
+    print(f"max cell's area = {np.max(areas)}\n", f"min cell's area = {np.min(areas)}")
+    print(f"max orth error = {np.max(orths)}\n", f"min orth error = {np.min(orths)}\n",
+          f"avg orth error = {np.average(orths)}\n")
+
+
+def save_matrix_to_file(matrix, filename):
+    np.savetxt(filename, matrix, fmt='%.6f', delimiter=' ')
+
+
 # ТЕСТЫ #
 treshhold = 1e-8
-
-"""test, _ = winslow_without_implicit(31, Xyt, Xyb, Xyr, Xyl, treshhold, 999999)   # Уинслоу + Томпсон + явная TFI
-plt.plot(test[0], test[1], c="b", linewidth=1)
-plt.plot(np.transpose(test[0]), np.transpose(test[1]), c="b", linewidth=1)
-plt.show()"""
-"""
-test = implicit_transfinite_interpol(41, myt, myb, myr, myl)        # неявное задание сетки без сдвига узла
-plt.plot(test[0], test[1], c="b", linewidth=1)
-plt.plot(np.transpose(test[0]), np.transpose(test[1]), c="b", linewidth=1)
-plt.show()
-
-test = implicit_transfinite_interpol(41, chevt, chevb, chevr, chevl)        # неявное задание сетки без сдвига узла
-plt.plot(test[0], test[1], c="b", linewidth=1)
-plt.plot(np.transpose(test[0]), np.transpose(test[1]), c="b", linewidth=1)
-plt.show()
-
-node = [21, 21, 0.3, 0.2]    # некий известный узел , [положение в сетке по индексам, коорд в прве]
-
-test = implicit_transfinite_interpol(41, chevt, chevb, chevr, chevl, node)  # неявное задание сетки со сдвигом узла
-plt.plot(test[0], test[1], c="b", linewidth=1)
-plt.plot(np.transpose(test[0]), np.transpose(test[1]), c="b", linewidth=1)
-plt.show()"""
-
-"""
-test = transfinite_interpol(51, Xyt, Xyb, Xyl, Xyr)       # явное задание сетки / начальное приближение для Уинслоу
-plt.plot(test[0], test[1], c="b", linewidth=1)
-plt.plot(np.transpose(test[0]), np.transpose(test[1]), c="b", linewidth=1)
-plt.show()
-
-test = transfinite_interpol(51, x_top_chevron, x_bottom_chevron, x_left_chevron, x_right_chevron)       # явное задание сетки / начальное приближение для Уинслоу
-plt.plot(test[0], test[1], c="b", linewidth=1)
-plt.plot(np.transpose(test[0]), np.transpose(test[1]), c="b", linewidth=1)
-plt.show()
-
-test = transfinite_interpol(51, Myt, Myb, Myl, Myr)       # явное задание сетки / начальное приближение для Уинслоу
-plt.plot(test[0], test[1], c="b", linewidth=1)
-plt.plot(np.transpose(test[0]), np.transpose(test[1]), c="b", linewidth=1)
-plt.show()
-"""
 
 xup = np.array([
     0.014031364832386428, 0.11417310395451596, 0.20736382132788145,
@@ -1697,6 +1741,18 @@ def implicit_transfinite_better(discr, nod=None):
 node2 = [11, 11, 0.6, 0.5]
 
 nx = ny = 55  # РАЗМЕРНОСТЬ---------------------------------------------------------------------------------------------
+
+file_x = np.loadtxt("omega_x_wins")
+file_y = np.loadtxt("omega_y_wins")
+file_grid = np.array([file_x, file_y])
+
+print("File aspects:", end="\n")
+aspects_computation([nx, ny], file_grid)
+
+plt.plot(file_grid[0], file_grid[1], c="b", linewidth=1)
+plt.plot(np.transpose(file_grid[0]), np.transpose(file_grid[1]), c="b", linewidth=1)
+plt.show()
+
 # canon_grid = implicit_transfinite_interpol(nx, sq_t1, sq_b1, sq_l1, sq_r1)
 # canon_grid, count = winslow_without_implicit(NX, Xyt, Xyb, Xyr, Xyl, treshhold)
 # canon_grid = transfinite_interpol(nx, Xyt, Xyb, Xyl, Xyr)
@@ -1706,7 +1762,7 @@ canon_grid = implicit_transfinite_interpol(nx, sq_t2, sq_b2, sq_l2, sq_r2)
 
 # start
 coef_temp = 1
-dc = 0.08
+dc = 0.12
 
 for i in range(nx // 2 + coef_temp, nx - 1):  # низ
     for j in range(ny):
@@ -1716,40 +1772,6 @@ for i in range(nx // 2 + coef_temp, nx - 1):  # низ
             canon_grid[0][i][j] = canon_grid[0][i][j] ** (dense_coef + dc * coef_temp)
             canon_grid[0][nx // 2 - coef_temp][j] += razn * 1.07
     coef_temp += 1
-
-"""ind = 1
-for point in range(1, nx//3):   # верх
-    for i in range(nx):
-        if elem_sdvig < i < ny - (elem_sdvig+1):
-            x0 = canon_grid[0][0][i]
-            xN = canon_grid[0][nx//3+1][i]
-            canon_grid[0][point][i] = xN - (xN - x0)*(1-(ind/(nx//3)))**0.35
-    ind += 1
-ind = 1
-for point in range(nx-(nx//3)+1, nx-1):  # низ
-    for i in range(nx):
-        if elem_sdvig < i < ny - (elem_sdvig+1):
-            x0 = canon_grid[0][nx-(nx//3)][i]
-            xN = canon_grid[0][nx-1][i]
-            canon_grid[0][point][i] = x0 + (xN - x0)*(ind/(nx//3-1))**0.5
-    ind += 1"""
-
-"""ind = 1
-for point in range(1, nx//2):   # верх
-    for i in range(nx):
-        if elem_sdvig < i < ny - (elem_sdvig+1):
-            x0 = canon_grid[0][0][i]
-            xN = canon_grid[0][nx//2+1][i]
-            canon_grid[0][point][i] = xN - (xN - x0)*(1-(ind/(nx//2)))**0.65
-    ind += 1
-ind = 1
-for point in range(nx//2+1, nx-1):  # низ
-    for i in range(nx):
-        if elem_sdvig < i < ny - (elem_sdvig+1):
-            x0 = canon_grid[0][nx//2][i]
-            xN = canon_grid[0][nx-1][i]
-            canon_grid[0][point][i] = x0 + (xN - x0)*(ind/(nx//2))**0.7
-    ind += 1"""
 
 ind = 1
 for point in range(1, elem_sdvig):  # pravo
@@ -1773,13 +1795,12 @@ canon_grid[1] = np.flip(canon_grid[1], axis=0)
 canon_grid[0] = np.transpose(canon_grid[0])
 canon_grid[1] = np.transpose(canon_grid[1])
 
-canon_grid, count = winslow(nx, canon_grid[0], canon_grid[1], treshhold, 25)
+canon_grid, count = winslow(nx, canon_grid[0], canon_grid[1], treshhold, 30)
 
 xx, yy = canon_grid[0], canon_grid[1]
 canon_grid = (xx, yy)
 
 # ПЕРЕХОД ОТ СЕТКИ К ЯЧЕЙКАМ ------------------------------------------------------------------------------------------
-aspects = np.zeros((nx - 1, ny - 1))
 
 cells_x = np.empty((nx - 1, ny - 1), dtype=object)
 cells_y = np.empty((nx - 1, ny - 1), dtype=object)
@@ -1800,19 +1821,15 @@ for i in range(nx - 1):
         cy[1, 0] = canon_grid[1][i + 1, j]
         cx[0, 1] = canon_grid[0][i, j + 1]
         cy[0, 1] = canon_grid[1][i, j + 1]
-        t_side = ((cx[1, 1] - cx[1, 0]) ** 2 + (cy[1, 1] - cy[1, 0]) ** 2) ** 0.5
-        b_side = ((cx[0, 0] - cx[0, 1]) ** 2 + (cy[0, 0] - cy[0, 1]) ** 2) ** 0.5
-        l_side = ((cx[0, 0] - cx[1, 0]) ** 2 + (cy[0, 0] - cy[1, 0]) ** 2) ** 0.5
-        r_side = ((cx[1, 1] - cx[0, 1]) ** 2 + (cy[1, 1] - cy[0, 1]) ** 2) ** 0.5
-        sides = np.array([t_side, b_side, l_side, r_side])
-        aspects[i, j] = np.max(sides) / np.min(sides)
         # (cx[0, 0], cy[0, 0], cx[0, 1], cy[0, 1], cx[1, 1], cy[1, 1], cx[1, 0], cy[1, 0], new_ar, orig_ar) = \
         (x1, y1, x2, y2, x3, y3, x4, y4, new_ar, orig_ar) = \
             approximate_quad_by_pca(cx[0, 0], cy[0, 0], cx[0, 1], cy[0, 1], cx[1, 1], cy[1, 1], cx[1, 0], cy[1, 0])
 
         cx[1, 0], cy[1, 0], cx[0, 0], cy[0, 0], cx[0, 1], cy[0, 1], cx[1, 1], cy[1, 1] = \
             (x1, y1, x2, y2, x3, y3, x4, y4)
-print(f"max aspect canon = {np.max(aspects)}\n", f"min aspect canon = {np.min(aspects)}\n")
+
+print("Aspects for canon:\n", end="")
+aspects_computation([nx, ny], canon_grid)
 
 cells = np.array([cells_x, cells_y])
 
@@ -1844,6 +1861,9 @@ for i in range(nx-1, -1, -1):
 
 # omega_grid2, _ = winslow(nx, omega_grid2[0], omega_grid2[1], treshhold, 25)
 
+print("Aspects for omega1:\n", end="")
+aspects_computation([nx, ny], omega_grid2)
+
 plt.plot(omega_grid2[0], omega_grid2[1], c="b", linewidth=1)
 plt.plot(np.transpose(omega_grid2[0]), np.transpose(omega_grid2[1]), c="b", linewidth=1)
 plt.show()
@@ -1851,37 +1871,6 @@ plt.show()
 plt.plot(-np.transpose(canon_grid[1]), np.transpose(canon_grid[0]), c="b", linewidth=1)
 plt.plot(-canon_grid[1], canon_grid[0], c="b", linewidth=1)
 plt.show()
-
-aspects = np.zeros((nx - 1, ny - 1))
-
-cells_x = np.empty((nx - 1, ny - 1), dtype=object)
-cells_y = np.empty((nx - 1, ny - 1), dtype=object)
-for i in range(nx - 1):
-    for j in range(ny - 1):
-        cells_x[i, j] = np.zeros((2, 2))
-        cells_y[i, j] = np.zeros((2, 2))
-
-for i in range(nx - 1):
-    for j in range(ny - 1):
-        min_side = 1000
-        max_side = 0
-        cx = cells_x[i, j]
-        cy = cells_y[i, j]
-        cx[0, 0] = omega_grid2[0][i, j]
-        cy[0, 0] = omega_grid2[1][i, j]
-        cx[1, 1] = omega_grid2[0][i + 1, j + 1]
-        cy[1, 1] = omega_grid2[1][i + 1, j + 1]
-        cx[1, 0] = omega_grid2[0][i + 1, j]
-        cy[1, 0] = omega_grid2[1][i + 1, j]
-        cx[0, 1] = omega_grid2[0][i, j + 1]
-        cy[0, 1] = omega_grid2[1][i, j + 1]
-        t_side = ((cx[1, 1] - cx[1, 0]) ** 2 + (cy[1, 1] - cy[1, 0]) ** 2) ** 0.5
-        b_side = ((cx[0, 0] - cx[0, 1]) ** 2 + (cy[0, 0] - cy[0, 1]) ** 2) ** 0.5
-        l_side = ((cx[0, 0] - cx[1, 0]) ** 2 + (cy[0, 0] - cy[1, 0]) ** 2) ** 0.5
-        r_side = ((cx[1, 1] - cx[0, 1]) ** 2 + (cy[1, 1] - cy[0, 1]) ** 2) ** 0.5
-        sides = np.array([t_side, b_side, l_side, r_side])
-        aspects[i, j] = np.max(sides) / np.min(sides)
-print(f"max aspect omega1 = {np.max(aspects)}\n", f"min aspect omega1 = {np.min(aspects)}\n")
 
 #   МЕЙН ВЫЗОВ----------------------------------------------------------------------------------------------------------
 """new_grid = mimimize(omega_grid, canon_grid, (nx, ny), 1, 10**(-8))"""
@@ -1905,47 +1894,58 @@ omega_grid2, flag = mimimize(omega_grid2, cells, (nx, ny), 5, 1e-5, stop_flag=st
 # omega_grid2, count = winslow(nx, omega_grid2[0], omega_grid2[1], treshhold, 8)
 
 #   Подсчеты + график --------------------------------------------------------------------------------------------------
-aspects = np.zeros((nx - 1, ny - 1))
-
-cells_x = np.empty((nx - 1, ny - 1), dtype=object)
-cells_y = np.empty((nx - 1, ny - 1), dtype=object)
-for i in range(nx - 1):
-    for j in range(ny - 1):
-        cells_x[i, j] = np.zeros((2, 2))
-        cells_y[i, j] = np.zeros((2, 2))
-
-for i in range(nx - 1):
-    for j in range(ny - 1):
-        min_side = 1000
-        max_side = 0
-        cx = cells_x[i, j]
-        cy = cells_y[i, j]
-        cx[0, 0] = omega_grid2[0][i, j]
-        cy[0, 0] = omega_grid2[1][i, j]
-        cx[1, 1] = omega_grid2[0][i + 1, j + 1]
-        cy[1, 1] = omega_grid2[1][i + 1, j + 1]
-        cx[1, 0] = omega_grid2[0][i + 1, j]
-        cy[1, 0] = omega_grid2[1][i + 1, j]
-        cx[0, 1] = omega_grid2[0][i, j + 1]
-        cy[0, 1] = omega_grid2[1][i, j + 1]
-        t_side = ((cx[1, 1] - cx[1, 0]) ** 2 + (cy[1, 1] - cy[1, 0]) ** 2) ** 0.5
-        b_side = ((cx[0, 0] - cx[0, 1]) ** 2 + (cy[0, 0] - cy[0, 1]) ** 2) ** 0.5
-        l_side = ((cx[0, 0] - cx[1, 0]) ** 2 + (cy[0, 0] - cy[1, 0]) ** 2) ** 0.5
-        r_side = ((cx[1, 1] - cx[0, 1]) ** 2 + (cy[1, 1] - cy[0, 1]) ** 2) ** 0.5
-        sides = np.array([t_side, b_side, l_side, r_side])
-        aspects[i, j] = np.max(sides) / np.min(sides)
-print(f"max aspect omega2 = {np.max(aspects)}\n", f"min aspect omega2 = {np.min(aspects)}\n")
+print("Aspects for omega2:\n", end="")
+aspects_computation([nx, ny], omega_grid2)
 
 new_grid = omega_grid2
 plt.plot(new_grid[0], new_grid[1], c="b", linewidth=1)
 plt.plot(np.transpose(new_grid[0]), np.transpose(new_grid[1]), c="b", linewidth=1)
 plt.show()
 
+save_matrix_to_file(omega_grid2[0], "omega_x_smooth")
+save_matrix_to_file(omega_grid2[1], "omega_y_smooth")
 #   ТЕСТЫ---------------------------------------------------------------------------------------------------------------
-"""functional(omega_grid2, canon_grid, (nx, ny))
-functional2(omega_grid2, canon_grid, (nx, ny))"""
+"""test, _ = winslow_without_implicit(31, Xyt, Xyb, Xyr, Xyl, treshhold, 999999)   # Уинслоу + Томпсон + явная TFI
+plt.plot(test[0], test[1], c="b", linewidth=1)
+plt.plot(np.transpose(test[0]), np.transpose(test[1]), c="b", linewidth=1)
+plt.show()
 
-"""test = implicit_transfinite_interpol(41, chevt, chevb, chevr, chevl)        # неявное задание сетки без сдвига узла
+test = implicit_transfinite_interpol(41, myt, myb, myr, myl)        # неявное задание сетки без сдвига узла
+plt.plot(test[0], test[1], c="b", linewidth=1)
+plt.plot(np.transpose(test[0]), np.transpose(test[1]), c="b", linewidth=1)
+plt.show()
+
+test = implicit_transfinite_interpol(41, chevt, chevb, chevr, chevl)        # неявное задание сетки без сдвига узла
+plt.plot(test[0], test[1], c="b", linewidth=1)
+plt.plot(np.transpose(test[0]), np.transpose(test[1]), c="b", linewidth=1)
+plt.show()
+
+node = [21, 21, 0.3, 0.2]    # некий известный узел , [положение в сетке по индексам, коорд в прве]
+
+test = implicit_transfinite_interpol(41, chevt, chevb, chevr, chevl, node)  # неявное задание сетки со сдвигом узла
+plt.plot(test[0], test[1], c="b", linewidth=1)
+plt.plot(np.transpose(test[0]), np.transpose(test[1]), c="b", linewidth=1)
+plt.show()
+
+test = transfinite_interpol(51, Xyt, Xyb, Xyl, Xyr)       # явное задание сетки / начальное приближение для Уинслоу
+plt.plot(test[0], test[1], c="b", linewidth=1)
+plt.plot(np.transpose(test[0]), np.transpose(test[1]), c="b", linewidth=1)
+plt.show()
+
+test = transfinite_interpol(51, x_top_chevron, x_bottom_chevron, x_left_chevron, x_right_chevron)       # явное задание сетки / начальное приближение для Уинслоу
+plt.plot(test[0], test[1], c="b", linewidth=1)
+plt.plot(np.transpose(test[0]), np.transpose(test[1]), c="b", linewidth=1)
+plt.show()
+
+test = transfinite_interpol(51, Myt, Myb, Myl, Myr)       # явное задание сетки / начальное приближение для Уинслоу
+plt.plot(test[0], test[1], c="b", linewidth=1)
+plt.plot(np.transpose(test[0]), np.transpose(test[1]), c="b", linewidth=1)
+plt.show()
+
+functional(omega_grid2, canon_grid, (nx, ny))
+functional2(omega_grid2, canon_grid, (nx, ny))
+
+test = implicit_transfinite_interpol(41, chevt, chevb, chevr, chevl)        # неявное задание сетки без сдвига узла
 plt.plot(test[0], test[1], c="b", linewidth=1)
 plt.plot(np.transpose(test[0]), np.transpose(test[1]), c="b", linewidth=1)
 #plt.show()
